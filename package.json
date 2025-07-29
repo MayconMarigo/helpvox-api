@@ -1,0 +1,47 @@
+{
+  "name": "call-receiver-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "migration:create": "npx sequelize-cli migration:create",
+    "migrate": "npx sequelize-cli db:migrate",
+    "migration:rollback": "npx sequelize-cli db:migrate:undo",
+    "seed": "npx sequelize-cli db:seed --seed",
+    "seed:generate": "npx sequelize-cli seed:generate --name",
+    "populate:db": "npm run seed 20250505223211-create-user-types && npm run seed 20250506172553-bulk-add-users && npm run seed 20250510032130-bulk-add-calls && npm run seed 20250510032130-bulk-add-calls",
+    "sync": "node ./src/database/sync.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MayconMarigo/call-receiver-api.git"
+  },
+  "author": "Maycon Pires Marigo",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MayconMarigo/call-receiver-api/issues"
+  },
+  "homepage": "https://github.com/MayconMarigo/call-receiver-api#readme",
+  "description": "",
+  "dependencies": {
+    "@sequelize/core": "^7.0.0-alpha.46",
+    "base-32": "^0.0.3",
+    "bcrypt": "^5.1.1",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.14.1",
+    "nodemon": "^3.1.10",
+    "otpauth": "^9.4.0",
+    "pm2": "^6.0.6",
+    "qrcode": "^1.5.4",
+    "sequelize": "^6.37.7",
+    "sequelize-cli": "^6.6.3",
+    "socket.io": "^4.8.1"
+  }
+}
