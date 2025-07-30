@@ -914,19 +914,24 @@ exports.routesProvider = (app) => {
     async (req, res) => {
       try {
         const credential = req.body?.credential || null;
+        const userId = req.body?.userId || null;
         const { agendaId } = req.params;
 
         if (!credential)
           throw new Error("Credencial não encontrada no corpo requisição.");
 
+        if (!userId)
+          throw new Error("Id de usuário não encontrada no corpo requisição.");
+
         ValidationUtils.checkRequiredValues(
-          ["credential", "agendaId"],
-          ["credential", ...Object.keys(req.params)]
+          ["credential", "agendaId", "userId"],
+          ["credential", "userId", ...Object.keys(req.params)]
         );
 
         const updated = await credentialsService.associateAgendaToUser(
           credential,
-          agendaId
+          agendaId,
+          userId
         );
 
         res.status(200).send(updated);

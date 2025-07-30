@@ -22,10 +22,11 @@ const getUsersListWithCredential = async (credential) => {
   return users;
 };
 
-const associateAgendaToUser = async (credential, agendaId) => {
+const associateAgendaToUser = async (credential, agendaId, userId) => {
   const updated = await credentialsQueries.associateAgendaToUser(
     credential,
-    agendaId
+    agendaId,
+    userId
   );
 
   return updated;

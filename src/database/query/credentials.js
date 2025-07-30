@@ -82,18 +82,18 @@ const getUsersListWithCredential = async (credential) => {
   if (!findUserByCredential)
     throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
 
-  // const { dataValues } = findUserByCredential;
-  // const { userId } = dataValues;
+  const { dataValues } = findUserByCredential;
+  const { userId } = dataValues;
 
   const users = await User.findAll({
-    where: { userTypeId: 3 },
+    where: { userTypeId: 4, createdBy: userId },
     attributes: ["id", [literal("name"), "nome"]],
   });
 
   return users;
 };
 
-const associateAgendaToUser = async (credential, agendaId) => {
+const associateAgendaToUser = async (credential, agendaId, userId) => {
   const findUserByCredential = await Credential.findOne({
     where: {
       id: credential,
@@ -104,8 +104,8 @@ const associateAgendaToUser = async (credential, agendaId) => {
   if (!findUserByCredential)
     throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
 
-  const { dataValues } = findUserByCredential;
-  const { userId } = dataValues;
+  // const { dataValues } = findUserByCredential;
+  // const { userId } = dataValues;
 
   const [findReceiverIdByAgendaId] = await sequelize.query(
     `
@@ -147,16 +147,20 @@ const associateAgendaToUser = async (credential, agendaId) => {
 
   const room = await generateAdminRoomName(roomName, scheduledDateTime);
 
-  const updated = await Agenda.update(
+  await Agenda.update(
     {
       callId: room.id,
       callUrl: room.name,
       callerId: userId,
     },
-    { where: { id: agendaId } }
+    { where: { id: agendaId }, returning: true, plain: true }
   );
 
-  return !!updated;
+  const returnObject = {
+    url_da_chamada: `${BASE_DAILY_JS_URL_FRONTEND}${roomName}`,
+  };
+
+  return returnObject;
 };
 
 exports.credentialsQueries = {
