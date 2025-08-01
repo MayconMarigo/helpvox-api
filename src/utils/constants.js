@@ -1,7 +1,7 @@
 //TOTP
 const TOTP = {
   AUTHENTICATOR_TIMEOUT: 30,
-  AUTHENTICATOR_NAME: "call-receiver-api",
+  AUTHENTICATOR_NAME: "BEM+ security",
 };
 
 //URLS

@@ -4,9 +4,13 @@ const { ERROR_MESSAGES } = require("../utils/constants");
 const { extractCodeAndMessageFromError } = require("../utils/error");
 
 const isCredential = async (req, res, next) => {
+  console.log("first2")
   try {
     const { authorization } = req.headers;
+    console.log(authorization);
     const credential = TokenService.extractTokenFromHeaders(authorization);
+    console.log(credential);
+
 
     if (!credential)
       throw new Error(JSON.stringify(ERROR_MESSAGES.CREDENTIAL_NOT_FOUND));

@@ -157,10 +157,68 @@ const associateAgendaToUser = async (credential, agendaId, userId) => {
   );
 
   const returnObject = {
-    url_da_chamada: `${BASE_DAILY_JS_URL_FRONTEND}${roomName}`,
+    url_da_chamada: `https://atendimentos.bemmaiscard.com.br/public/room?name${roomName}`,
+    // url_da_chamada: `${BASE_DAILY_JS_URL_FRONTEND}${roomName}`,
   };
 
   return returnObject;
+};
+
+const createUserWithCredential = async (name, email, phone, credential) => {
+  const findUserByCredential = await Credential.findOne({
+    where: {
+      id: credential,
+    },
+    attributes: ["userId"],
+  });
+
+  if (!findUserByCredential)
+    throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+
+  const { dataValues } = findUserByCredential;
+  const { userId } = dataValues;
+
+  const created = await User.create(
+    {
+      id: crypto.randomUUID(),
+      name,
+      email,
+      phone,
+      password: "",
+      logoImage: null,
+      colorScheme: null,
+      status: 1,
+      userTypeId: 4,
+      secret2fa: "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: userId,
+    },
+    {
+      returning: true,
+      plain: true,
+    }
+  );
+
+  return created;
+};
+
+const deleteUserWithCredential = async (credential, userId) => {
+  const [findUsersAllowedList] = await sequelize.query(`
+    SELECT DISTINCT(u.id) FROM credentials c
+    INNER JOIN users u
+    ON
+    c.userId = u.createdBy
+    where c.id = '${credential}'
+    `);
+
+  const allowed = !!findUsersAllowedList.find((user) => user.id == userId);
+
+  if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+
+  await User.update({ status: 0 }, { where: { id: userId }, returning: true });
+
+  return { message: "Usuário inativado com sucesso." };
 };
 
 exports.credentialsQueries = {
@@ -168,4 +226,6 @@ exports.credentialsQueries = {
   getUserAgendaWithCredential,
   getUsersListWithCredential,
   associateAgendaToUser,
+  createUserWithCredential,
+  deleteUserWithCredential,
 };

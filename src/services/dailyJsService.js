@@ -30,7 +30,6 @@ exports.generateTokenByRoomName = async (roomName, user, isAdmin = false) => {
 
 exports.generateAdminRoomName = async (roomName, expiry) => {
   const time = new Date(expiry).getTime() / 1000 + 3600;
-  // console.log(time)
   const request = await fetch(`${BASE_DAILY_JS_URL}/rooms`, {
     method: "POST",
     headers: {

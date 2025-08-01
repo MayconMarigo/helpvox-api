@@ -32,9 +32,30 @@ const associateAgendaToUser = async (credential, agendaId, userId) => {
   return updated;
 };
 
+const createUserWithCredential = async (name, email, phone, credential) => {
+  const created = await credentialsQueries.createUserWithCredential(
+    name,
+    email,
+    phone,
+    credential
+  );
+
+  return created;
+};
+
+const deleteUserWithCredential = async (credential, userId) => {
+  const deleted = await credentialsQueries.deleteUserWithCredential(
+    credential,
+    userId
+  );
+  return deleted;
+};
+
 exports.credentialsService = {
   findValidCredential,
   getUserAgendaWithCredential,
   getUsersListWithCredential,
   associateAgendaToUser,
+  createUserWithCredential,
+  deleteUserWithCredential,
 };

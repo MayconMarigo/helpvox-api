@@ -858,6 +858,50 @@ exports.routesProvider = (app) => {
     }
   );
 
+  app.post("/api/user/credentials/create", isCredential, async (req, res) => {
+    try {
+      const { name, email, phone, credential } = req.body;
+
+      ValidationUtils.checkRequiredValues(
+        ["name", "email", "phone", "credential"],
+        [...Object.keys(req.body)]
+      );
+
+      const created = await credentialsService.createUserWithCredential(
+        name,
+        email,
+        phone,
+        credential
+      );
+
+      res.status(200).send(created);
+    } catch (error) {
+      const { code, message } = extractCodeAndMessageFromError(error.message);
+      res.status(code).send({ message });
+    }
+  });
+
+  app.post("/api/user/credentials/delete", isCredential, async (req, res) => {
+    try {
+      const { userId, credential } = req.body;
+
+      ValidationUtils.checkRequiredValues(
+        ["userId", "credential"],
+        [...Object.keys(req.body)]
+      );
+
+      const deleted = await credentialsService.deleteUserWithCredential(
+        credential,
+        userId
+      );
+
+      res.status(200).send(deleted);
+    } catch (error) {
+      const { code, message } = extractCodeAndMessageFromError(error.message);
+      res.status(code).send({ message });
+    }
+  });
+
   app.post(
     "/api/credentials/schedule/get-all",
     isCredential,
