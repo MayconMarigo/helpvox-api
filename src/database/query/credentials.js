@@ -35,6 +35,8 @@ const getUserAgendaWithCredential = async (startDate, endDate, credential) => {
         DATE_FORMAT(scheduledDateTime, '%H:%i') as hora_inicio, 
         DATE_FORMAT(DATE_ADD(scheduledDateTime, INTERVAL 30 MINUTE), '%H:%i') AS hora_fim,
         receiver.name as medico,
+        receiver.speciality as especialidade,
+        receiver.document as crm,
         caller.name as usuario,
         a.id as id_agenda
       FROM agendas a
@@ -87,7 +89,7 @@ const getUsersListWithCredential = async (credential) => {
 
   const users = await User.findAll({
     where: { userTypeId: 4, createdBy: userId },
-    attributes: ["id", [literal("name"), "nome"]],
+    attributes: ["id", [literal("name"), "nome"], [literal("document"), "cpf"]],
   });
 
   return users;
@@ -164,7 +166,13 @@ const associateAgendaToUser = async (credential, agendaId, userId) => {
   return returnObject;
 };
 
-const createUserWithCredential = async (name, email, phone, credential) => {
+const createUserWithCredential = async (
+  name,
+  email,
+  phone,
+  credential,
+  document
+) => {
   const findUserByCredential = await Credential.findOne({
     where: {
       id: credential,
@@ -177,7 +185,7 @@ const createUserWithCredential = async (name, email, phone, credential) => {
 
   const { dataValues } = findUserByCredential;
   const { userId } = dataValues;
-
+  
   const created = await User.create(
     {
       id: crypto.randomUUID(),
@@ -193,6 +201,8 @@ const createUserWithCredential = async (name, email, phone, credential) => {
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: userId,
+      document,
+      speciality: null,
     },
     {
       returning: true,
@@ -221,6 +231,77 @@ const deleteUserWithCredential = async (credential, userId) => {
   return { message: "Usuário inativado com sucesso." };
 };
 
+const updateUserWithCredential = async (
+  name,
+  email,
+  phone,
+  credential,
+  document,
+  userId
+) => {
+  const [findUsersAllowedList] = await sequelize.query(`
+    SELECT DISTINCT(u.id) FROM credentials c
+    INNER JOIN users u
+    ON
+    c.userId = u.createdBy
+    where c.id = '${credential}'
+    `);
+
+  const allowed = !!findUsersAllowedList.find((user) => user.id == userId);
+
+  if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+
+  const payload = {};
+
+  if (name) payload.name = name;
+  if (email) payload.email = email;
+  if (phone) payload.phone = phone;
+  if (document) payload.document = document;
+
+  await User.update(payload, { where: { id: userId } });
+
+  return { message: "Usuário atualizado com sucesso." };
+};
+
+const diassociateAgendaFromUser = async (credential, agendaId) => {
+  const findUserByCredential = await Credential.findOne({
+    where: {
+      id: credential,
+    },
+    attributes: ["userId"],
+  });
+
+  if (!findUserByCredential)
+    throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+
+  const { dataValues } = findUserByCredential;
+  const { userId } = dataValues;
+
+  const [allowedAgendas] = await sequelize.query(
+    `
+    SELECT a.id from agendas a
+    INNER JOIN users u 
+    ON a.callerId = u.id
+    WHERE u.createdBy = '${userId}' 
+    `
+  );
+
+  const allowed = allowedAgendas.find((agenda) => agenda.id == agendaId);
+
+  if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+
+  await Agenda.update(
+    {
+      callId: null,
+      callUrl: null,
+      callerId: null,
+    },
+    { where: { id: agendaId }, returning: true, plain: true }
+  );
+
+  return { message: "Agenda desmarcada com sucesso." };
+};
+
 exports.credentialsQueries = {
   findValidCredential,
   getUserAgendaWithCredential,
@@ -228,4 +309,6 @@ exports.credentialsQueries = {
   associateAgendaToUser,
   createUserWithCredential,
   deleteUserWithCredential,
+  updateUserWithCredential,
+  diassociateAgendaFromUser,
 };

@@ -42,6 +42,12 @@ module.exports = (sequelize, DataTypes) => {
     createdBy: {
       type: DataTypes.UUID,
     },
+    document: {
+      type: DataTypes.STRING(20),
+    },
+    specialty: {
+      type: DataTypes.STRING(50),
+    },
   });
 
   User.associate = (models) => {

@@ -860,18 +860,54 @@ exports.routesProvider = (app) => {
 
   app.post("/api/user/credentials/create", isCredential, async (req, res) => {
     try {
-      const { name, email, phone, credential } = req.body;
+      const { name, email, phone, credential, document } = req.body;
 
+      
       ValidationUtils.checkRequiredValues(
-        ["name", "email", "phone", "credential"],
+        ["name", "email", "phone", "credential", "document"],
         [...Object.keys(req.body)]
       );
-
+      
       const created = await credentialsService.createUserWithCredential(
         name,
         email,
         phone,
-        credential
+        credential,
+        document
+      );
+
+      res.status(200).send(created);
+    } catch (error) {
+      const { code, message } = extractCodeAndMessageFromError(error.message);
+      res.status(code).send({ message });
+    }
+  });
+
+  app.put("/api/user/credentials/update", isCredential, async (req, res) => {
+    try {
+      const { name, email, phone, document } = req.body;
+
+      const credential = req.body?.credential || null;
+      const userId = req.body?.userId || null;
+
+      if (!credential)
+        throw new Error("Credencial não encontrada no corpo requisição.");
+
+      if (!userId)
+        throw new Error("Credencial não encontrada no corpo requisição.");
+
+      ValidationUtils.checkRequiredValues(
+        ["credential", "userId"],
+        [...Object.keys(req.body)]
+      );
+
+      const created = await credentialsService.updateUserWithCredential(
+        name,
+        email,
+        phone,
+        credential,
+        document,
+        userId
       );
 
       res.status(200).send(created);
@@ -979,6 +1015,38 @@ exports.routesProvider = (app) => {
         );
 
         res.status(200).send(updated);
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.post(
+    "/api/credentials/agenda/:agendaId/delete",
+    isCredential,
+    async (req, res) => {
+      try {
+        const credential = req.body?.credential || null;
+        const { agendaId } = req.params;
+
+        if (!credential)
+          throw new Error("Credencial não encontrada no corpo requisição.");
+
+        if (!agendaId)
+          throw new Error("Id da agenda não encontrada no corpo requisição.");
+
+        ValidationUtils.checkRequiredValues(
+          ["credential", "agendaId"],
+          ["credential", "agendaId"]
+        );
+
+        const deleted = await credentialsService.diassociateAgendaFromUser(
+          credential,
+          agendaId
+        );
+
+        res.status(200).send(deleted);
       } catch (error) {
         const { code, message } = extractCodeAndMessageFromError(error.message);
         res.status(code).send({ message });
