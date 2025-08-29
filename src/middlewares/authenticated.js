@@ -14,16 +14,20 @@ const isAuthenticated = async (req, res, next) => {
     const data = await TokenService.verifyEncodedToken(token);
 
     const { id, encryptedPassword } = data;
-    const hashedPassword = await userQueries.findUserById(id);
-    const decryptedPassword = CryptoUtils.decryptWithCypher(encryptedPassword);
 
-    const arePasswordsEqual = await CryptoUtils.comparehashedPasswords(
-      decryptedPassword,
-      hashedPassword
-    );
+    if (data.userTypeId !== 4) {
+      const hashedPassword = await userQueries.findUserById(id);
+      const decryptedPassword =
+        CryptoUtils.decryptWithCypher(encryptedPassword);
 
-    if (!arePasswordsEqual)
-      throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+      const arePasswordsEqual = await CryptoUtils.comparehashedPasswords(
+        decryptedPassword,
+        hashedPassword
+      );
+
+      if (!arePasswordsEqual)
+        throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+    }
     next();
   } catch (error) {
     const { code, message } = extractCodeAndMessageFromError(error.message);

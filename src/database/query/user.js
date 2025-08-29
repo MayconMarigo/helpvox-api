@@ -43,7 +43,6 @@ const findUserByEmailAndPassword = async (email, password) => {
     ...dataValues,
     type: userUtils.checkUserType(dataValues.userTypeId),
   };
-  delete user.userTypeId;
 
   return user;
 };
@@ -64,7 +63,16 @@ const findUserById = async (userId) => {
 const getUserDataById = async (userId) => {
   const data = await User.findOne({
     where: { id: userId, status: 1 },
-    attributes: ["id", "name", "email", "phone", "logoImage", "colorScheme"],
+    attributes: [
+      "id",
+      "name",
+      "email",
+      "phone",
+      "logoImage",
+      "colorScheme",
+      "userTypeId",
+      "createdBy",
+    ],
     include: {
       model: UserType,
       required: true,
@@ -81,12 +89,29 @@ const getUserDataById = async (userId) => {
   dataValues.type = type;
   delete dataValues.user_type;
 
+  if (dataValues.userTypeId == "4") {
+    const [createdByData] = await sequelize.query(
+      `
+        SELECT 
+        u.logoImage
+        FROM users u
+        where u.id = '${dataValues.createdBy}'
+      `
+    );
+
+    const logoImage = createdByData[0]?.logoImage;
+
+    dataValues.logoImage = logoImage;
+  }
+
   if (dataValues.logoImage) {
     const base64Image = dataValues.logoImage.toString("base64");
     const dataUrl = `data:image/png;base64,${base64Image}`;
 
     dataValues.logoImage = dataUrl;
   }
+
+  delete dataValues.createdBy;
 
   return dataValues;
 };
@@ -320,7 +345,14 @@ const associateCompanyToUserAgenda = async (
 const getAllUsersByCompanyId = async (companyId) => {
   const data = await User.findAll({
     where: { createdBy: companyId, userTypeId: 4 },
-    attributes: ["id", "name", "email", "phone", "status"],
+    attributes: [
+      "id",
+      "name",
+      "email",
+      "phone",
+      "status",
+      [literal("document"), "cpf"],
+    ],
   });
 
   if (data.length == 0 || !data) return [];
@@ -340,7 +372,15 @@ const getAllUsersByCompanyId = async (companyId) => {
 };
 
 const createUser = async (payload, companyId) => {
-  const { name, email, phone, password, userTypeId } = payload;
+  const {
+    name,
+    email,
+    phone,
+    password = "",
+    userTypeId,
+    document,
+    speciality = null,
+  } = payload;
 
   const checkIfUserIsWorker = (type) => type == 4;
 
@@ -374,6 +414,8 @@ const createUser = async (payload, companyId) => {
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: companyId,
+      document,
+      speciality,
     },
   });
 
@@ -480,6 +522,7 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
       SELECT
         COALESCE(caller.name, "Anônimo") AS callerName,
         receiver.name AS receiverName,
+        receiver.speciality,
         c.startTime
       FROM calls c
       LEFT JOIN users caller ON c.callerId = caller.id
@@ -503,6 +546,98 @@ const deleteAgendaById = async (agendaId) => {
   return deleted;
 };
 
+const bulkCreateUsers = async (decodedBody, companyId) => {
+  const usersList = decodedBody.map((user) => {
+    return {
+      ...user,
+      password: "",
+      logoImage: null,
+      colorScheme: null,
+      status: Number(user.status) || 1,
+      userTypeId: 4,
+      secret2fa: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: companyId,
+      speciality: null,
+    };
+  });
+
+  const created = await User.bulkCreate(usersList);
+  return created;
+};
+
+const getUserByEmailAndCredential = async (email, credential) => {
+  const data = await User.findOne({
+    where: { email, status: 1, userTypeId: 4 },
+    attributes: ["id", "name", "email", "userTypeId"],
+  });
+
+  if (!data) throw new Error(JSON.stringify(ERROR_MESSAGES.USER.NOT_FOUND));
+
+  const { dataValues } = data;
+
+  const [findUsersAllowedList] = await sequelize.query(`
+    SELECT DISTINCT(u.id) FROM credentials c
+    INNER JOIN users u
+    ON
+    c.userId = u.createdBy
+    where c.id = '${credential}'
+    `);
+
+  const allowed = !!findUsersAllowedList.find(
+    (user) => user.id == dataValues.id
+  );
+
+  if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+
+  const [createdByData] = await sequelize.query(
+    `
+      SELECT 
+      u.logoImage
+      FROM users u 
+      INNER JOIN credentials c 
+      ON c.userId = u.id 
+      WHERE c.id = '${credential}'
+    `
+  );
+
+  // const logoImage = createdByData[0]?.logoImage;
+
+  const user = {
+    ...dataValues,
+    type: userUtils.checkUserType(dataValues.userTypeId),
+    // logoImage,
+  };
+
+  return user;
+};
+
+const bulkDeleteUsers = async (companyId) => {
+  const deleted = await sequelize.query(
+    `
+      DELETE FROM users
+      WHERE
+      userTypeId = 4
+      AND
+      createdBy = '${companyId}'
+    `
+  );
+
+  return deleted;
+};
+
+const getUserTypeIdById = async (userId) => {
+  const [data] = await sequelize.query(
+    `
+      SELECT userTypeId from users
+      WHERE id = '${userId}'
+    `
+  );
+  const { userTypeId } = data[0];
+  return userTypeId;
+};
+
 exports.userQueries = {
   findAdminUserByEmail,
   findUserByEmailAndPassword,
@@ -523,4 +658,8 @@ exports.userQueries = {
   getScheduledAgendaByDateRange,
   getAllCallsByCompanyId,
   deleteAgendaById,
+  bulkCreateUsers,
+  getUserByEmailAndCredential,
+  bulkDeleteUsers,
+  getUserTypeIdById,
 };

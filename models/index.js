@@ -1,5 +1,5 @@
 const { Sequelize, DataTypes } = require("sequelize");
-require('dotenv').config();
+require("dotenv").config();
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
@@ -7,9 +7,18 @@ const sequelize = new Sequelize(
   process.env.DB_PASSWORD,
   {
     host: "localhost",
+    dialectOptions: {
+      dateStrings: true,
+      typeCast: function (field, next) {
+        if (field.type === "DATETIME") {
+          return field.string();
+        }
+        return next();
+      },
+    },
     dialect: "mysql",
     logging: false,
-    timezone: '-03:00'
+    timezone: "-03:00",
   }
 );
 
@@ -28,7 +37,7 @@ const db = {
   Credential,
   Call,
   Agenda,
-  Rating
+  Rating,
 };
 
 Object.values(db).forEach((model) => {

@@ -64,7 +64,7 @@ const ERROR_MESSAGES = {
   USER: {
     NOT_FOUND: {
       code: 422,
-      message: "Se o usuário existir, por favor verifique o email e senha.",
+      message: "Se o usuário existir, por favor verifique as credenciais.",
     },
     ALREADY_EXISTS: {
       message: "Usuário já existe na base de dados.",

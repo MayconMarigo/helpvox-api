@@ -16,6 +16,8 @@ const createUser = async (payload) => {
     userTypeId,
     logoImage = null,
     color,
+    document = null,
+    speciality,
   } = payload;
 
   const secret2fa = CryptoUtils.generateBase32Hash();
@@ -34,17 +36,20 @@ const createUser = async (payload) => {
       secret2fa,
       createdAt: new Date(),
       updatedAt: new Date(),
+      document,
+      speciality,
     },
   });
 
   return created;
 };
 
-const updateUserByUserEmail = async (payload) => {
-  const { name, email, phone, password, status, userTypeId } = payload;
+const updateUserByUserEmailOrName = async (payload, type) => {
+  const { name, email, phone, password, status, userTypeId, oldEmail } =
+    payload;
 
-  const updated = await User.update(
-    {
+  const updateObject = {
+    2: {
       name,
       email,
       phone,
@@ -53,10 +58,24 @@ const updateUserByUserEmail = async (payload) => {
       userTypeId,
       updatedAt: new Date(),
     },
-    {
+    3: {
+      name,
+      password,
+      status,
+      updatedAt: new Date(),
+    },
+  };
+
+  const whereObject = {
+    2: {
       where: { email },
-    }
-  );
+    },
+    3: {
+      where: { name: oldEmail },
+    },
+  };
+
+  const updated = await User.update(updateObject[type], whereObject[type]);
 
   return updated;
 };
@@ -80,8 +99,8 @@ const getAllCalls = async (startDate, endDate) => {
     SELECT
       COALESCE(caller.name, "Anônimo") AS callerName,
       receiver.name AS receiverName,
-      c.startTime,
-      c.endTime,
+      receiver.speciality,
+      DATE_SUB(c.startTime, INTERVAL 3 HOUR) AS startTime,
       c.videoUrl,
       TIMEDIFF(c.endTime, c.startTime) AS callDuration
     FROM calls c
@@ -90,6 +109,8 @@ const getAllCalls = async (startDate, endDate) => {
     WHERE (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
     AND
     caller.userTypeId = 4
+    AND
+    c.isSocketConnection = 1
     `);
 
   return reports;
@@ -130,10 +151,15 @@ const findAllCallsByUserIdAndType = async (
   return report;
 };
 
-const getAllUsers = async () => {
+const getAllUsers = async (userTypeId) => {
+  const attributesPerTypeId = {
+    2: ["name", "email", "phone", "status"],
+    3: ["name", "speciality", "status"],
+  };
+
   const data = await User.findAll({
-    where: { userTypeId: 2 },
-    attributes: ["name", "email", "phone", "status"],
+    where: { userTypeId },
+    attributes: attributesPerTypeId[userTypeId],
   });
 
   if (!data) return null;
@@ -173,6 +199,7 @@ const getDashboardInfo = async () => {
     COUNT(*) AS calls_quantity
   FROM 
     calls
+  WHERE isSocketConnection = 1
   GROUP BY 
     month
   ORDER BY 
@@ -182,19 +209,22 @@ const getDashboardInfo = async () => {
   const [users] = await sequelize.query(`
     SELECT 
       COUNT(users.id) AS users_quantity 
-      FROM users;
+      FROM users
+      where userTypeId = 2
     `);
 
   const [callsQty] = await sequelize.query(`
     SELECT 
       COUNT(calls.id) AS calls_quantity 
-      FROM calls;
+      FROM calls
+      WHERE isSocketConnection = 1
     `);
 
   const [durationInMinutes] = await sequelize.query(`
     SELECT 
-      SUM(TIMESTAMPDIFF(MINUTE, c.startTime, c.endTime)) 
-      AS minutes_count from calls c
+    SUM(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60)) AS minutes_count
+    FROM calls c
+    WHERE c.isSocketConnection = 1;
     `);
 
   const { users_quantity } = users[0];
@@ -252,7 +282,7 @@ const getAgendaByDateRange = async (startDate, endDate, userId) => {
 
 exports.adminQueries = {
   createUser,
-  updateUserByUserEmail,
+  updateUserByUserEmailOrName,
   getAllCalls,
   findAllCallsByUserIdAndType,
   getAllUsers,

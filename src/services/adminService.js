@@ -32,14 +32,14 @@ const findAllCallsByUserIdAndType = async (
   return reports;
 };
 
-const updateUserByUserEmail = async (payload) => {
-  const updated = await adminQueries.updateUserByUserEmail(payload);
+const updateUserByUserEmailOrName = async (payload, userTypeId) => {
+  const updated = await adminQueries.updateUserByUserEmailOrName(payload, userTypeId);
 
   return updated;
 };
 
-const getAllUsers = async () => {
-  const users = await adminQueries.getAllUsers();
+const getAllUsers = async (userTypeId) => {
+  const users = await adminQueries.getAllUsers(userTypeId);
 
   return users;
 };
@@ -68,11 +68,11 @@ const getAgendaByDateRange = async (startDate, endDate, userId) => {
 
 exports.adminService = {
   createUser,
-  updateUserByUserEmail,
+  updateUserByUserEmailOrName,
   getAllCalls,
   findAllCallsByUserIdAndType,
   getAllUsers,
   getDashboardInfo,
   getAgendaByDateRange,
-  getAllUsersNameAndId
+  getAllUsersNameAndId,
 };

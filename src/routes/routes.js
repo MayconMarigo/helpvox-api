@@ -45,9 +45,10 @@ exports.routesProvider = (app) => {
     }
   });
 
-  app.get("/api/admin/users/get-all", isAdmin, async (req, res) => {
+  app.get("/api/admin/users/get-all/:userTypeId", isAdmin, async (req, res) => {
     try {
-      const users = await adminService.getAllUsers();
+      const { userTypeId } = req.params;
+      const users = await adminService.getAllUsers(userTypeId);
 
       res.status(200).send(users);
     } catch (error) {
@@ -292,18 +293,20 @@ exports.routesProvider = (app) => {
 
   // ROTAS PUT
 
-  app.put("/api/admin/user/update", isAdmin, async (req, res) => {
+  app.put("/api/admin/user/update/:userTypeId", isAdmin, async (req, res) => {
     try {
       const decodedBody = await CryptoUtils.retrieveValuesFromEncryptedBody(
         req.body
       );
+
+      const { userTypeId } = req.params;
+
       ValidationUtils.checkRequiredValues(
-        ["name", "email", "password", "status"],
+        ["name", "status"],
         Object.keys(decodedBody)
       );
-      ValidationUtils.checkTransformedValues(decodedBody);
-
-      await adminService.updateUserByUserEmail(decodedBody);
+      // ValidationUtils.checkTransformedValues(decodedBody);
+      await adminService.updateUserByUserEmailOrName(decodedBody, userTypeId);
 
       res.status(204).send();
     } catch (error) {
@@ -461,48 +464,48 @@ exports.routesProvider = (app) => {
   // Rotas POST
 
   app.post("/api/call/end", async (req, res) => {
-    if (req.body.test) return res.status(200).send();
-    const { meeting_id, room } = req.body.payload;
+    // const { meeting_id, room } = req.body.payload;
 
-    if (!meeting_id) return res.status(404).send({ ok: false });
+    // if (!meeting_id) return res.status(404).send({ ok: false });
+
+    // const meeting_id = "213ca2fc-0d6c-4481-8855-1f11604e53c3";
+    const meeting_id = "92420c20-ec72-4758-833b-3c66c52eff9c";
+    const room = "123";
 
     try {
       const meetingInfo = await generateMeetingInformation(meeting_id);
 
-      console.log("meetingInfo", meetingInfo);
+      let user01Info = meetingInfo.data[0];
+      let user02Info = meetingInfo.data[1];
 
-      const user01Info = meetingInfo.data[0];
-      const user02Info = meetingInfo.data[1];
+      const user01 = await userQueries.getUserTypeIdById(user01Info.user_id);
+      const user02 = await userQueries.getUserTypeIdById(user02Info.user_id);
 
-      let user01;
-      if (user01Info.user_id == null) {
-        user01 = "4";
-      } else {
-        user01 = "3";
-      }
-      console.log("user01", user01);
+      user01Info.userTypeId = user01;
+      user02Info.userTypeId = user02;
 
-      let user02;
-      if (user02Info.user_id == null) {
-        user02 = "4";
-      } else {
-        user02 = "3";
-      }
-      console.log("user02", user02);
+      const participants = {};
+      const findCallerAndReceiver = (firstUserInfo, secondUserInfo) => {
+        if (firstUserInfo.userTypeId == 3) {
+          participants.receiver = firstUserInfo;
+          participants.caller = secondUserInfo;
+          return;
+        }
 
-      const callerId = user01 == "2" ? user01Info.user_id : user02Info.user_id;
-      console.log("callerId", callerId);
-      const receiverId =
-        user01 == "3" ? user01Info.user_id : user02Info.user_id;
-      console.log("receiverId", receiverId);
+        participants.caller = firstUserInfo;
+        participants.receiver = secondUserInfo;
+      };
+
+      
+      findCallerAndReceiver(user01Info, user02Info);
+      
+      console.log(participants);
+      const callerId = participants.caller.user_id;
+      const receiverId = participants.receiver.user_id;
 
       const getInitialTime = (userJoinTime) => new Date(userJoinTime * 1000);
       const getFinalTime = (userJoinTime, duration) =>
         new Date(userJoinTime * 1000 + duration * 1000);
-
-      const isAnonymous =
-        user01Info.user_id === null || user02Info.user_id === null;
-      console.log("isAnonymous", isAnonymous);
 
       await CallService.createCall(
         room,
@@ -512,7 +515,8 @@ exports.routesProvider = (app) => {
         getInitialTime(user01Info.join_time),
         getFinalTime(user01Info.join_time, user01Info.duration),
         null,
-        isAnonymous
+        false,
+        1
       );
 
       return res.status(200).send({ ok: true });
@@ -575,7 +579,6 @@ exports.routesProvider = (app) => {
         req.body
       );
 
-      console.log(decodedBody);
       ValidationUtils.checkRequiredValues(
         ["name", "email", "password", "userTypeId"],
         Object.keys(decodedBody)
@@ -617,6 +620,56 @@ exports.routesProvider = (app) => {
       res.status(code).send({ message });
     }
   });
+
+  app.post(
+    "/api/:companyId/users/create/bulk",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const cloneBody = [...req.body];
+
+        const decodeUserArray = async (usersArray) => {
+          const t = [];
+          for (const user of usersArray) {
+            const temp = await CryptoUtils.retrieveValuesFromEncryptedBody(
+              user
+            );
+            t.push(temp);
+          }
+          return t;
+        };
+
+        const decodedBody = await decodeUserArray(cloneBody);
+
+        const { companyId } = req.params;
+
+        const created = await UserService.bulkCreateUsers(
+          decodedBody,
+          companyId
+        );
+        res.status(201).send({ created });
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.delete(
+    "/api/:companyId/users/delete/bulk",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { companyId } = req.params;
+
+        const deleted = await UserService.bulkDeleteUsers(companyId);
+        res.status(201).send({ deleted });
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
 
   app.post("/api/rating/create", isAuthenticated, async (req, res) => {
     try {
@@ -698,6 +751,34 @@ exports.routesProvider = (app) => {
         ...user,
         encryptedPassword,
       });
+
+      return res.status(200).send({ token: token });
+    } catch (error) {
+      const { code, message } = extractCodeAndMessageFromError(error.message);
+
+      res.status(code).send({ message });
+    }
+  });
+
+  app.post("/api/credentials/auth", async (req, res) => {
+    try {
+      const decodedBody = await CryptoUtils.retrieveValuesFromEncryptedBody(
+        req.body
+      );
+      ValidationUtils.checkRequiredValues(
+        ["email", "credential"],
+        Object.keys(decodedBody)
+      );
+      ValidationUtils.checkTransformedValues(decodedBody);
+
+      const { email, credential } = decodedBody;
+
+      const user = await UserService.getUserByEmailAndCredential(
+        email,
+        credential
+      );
+
+      const token = TokenService.createEncodedToken(user);
 
       return res.status(200).send({ token: token });
     } catch (error) {
@@ -862,12 +943,11 @@ exports.routesProvider = (app) => {
     try {
       const { name, email, phone, credential, document } = req.body;
 
-      
       ValidationUtils.checkRequiredValues(
         ["name", "email", "phone", "credential", "document"],
         [...Object.keys(req.body)]
       );
-      
+
       const created = await credentialsService.createUserWithCredential(
         name,
         email,

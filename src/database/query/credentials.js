@@ -159,7 +159,7 @@ const associateAgendaToUser = async (credential, agendaId, userId) => {
   );
 
   const returnObject = {
-    url_da_chamada: `https://atendimentos.bemmaiscard.com.br/public/room?name${roomName}`,
+    url_da_chamada: `https://atendimentos.bemmaiscard.com.br/authenticated/room?name${roomName}`,
     // url_da_chamada: `${BASE_DAILY_JS_URL_FRONTEND}${roomName}`,
   };
 
@@ -185,7 +185,7 @@ const createUserWithCredential = async (
 
   const { dataValues } = findUserByCredential;
   const { userId } = dataValues;
-  
+
   const created = await User.create(
     {
       id: crypto.randomUUID(),

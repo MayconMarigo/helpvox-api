@@ -22,13 +22,15 @@ const handleCallAgentBySocketId = (
   companyUserId,
   room,
   agentToken,
-  companyToken
+  companyToken,
+  companyName
 ) =>
   socket.to(agentId).emit("incomingCall", {
     company: {
       socketId: companyId,
       userId: companyUserId,
       token: companyToken,
+      name: companyName || "Anônimo",
     },
     agent: {
       socketId: agentId,
@@ -49,7 +51,12 @@ const modifyAgentStatusByType = (agents, agentIdToModify, status) =>
     return agent;
   });
 
-const handleAddToTheQueue = (socket, queue, isAgent = false) => {
+const handleAddToTheQueue = (
+  socket,
+  queue,
+  isAgent = false,
+  isObserver = false
+) => {
   let user;
 
   try {
@@ -62,7 +69,7 @@ const handleAddToTheQueue = (socket, queue, isAgent = false) => {
   const pushObject = {
     id: socket.id,
     status: isAgent ? "available" : null,
-    type: isAgent ? "agent" : "company",
+    type: isAgent ? "agent" : isObserver ? "observer" : "company",
     user,
     socket,
   };
@@ -76,6 +83,7 @@ const handleAddAgentToQueueByType = async (
   companiesQueue = null
 ) => {
   const isAgent = socket.handshake.query.type === "agent";
+  const isObserver = socket.handshake.query.type === "observer";
 
   if (isAgent) {
     console.log("Agente Conectado", socket.id);
@@ -84,7 +92,7 @@ const handleAddAgentToQueueByType = async (
     return;
   }
   console.log("Company Conectado", socket.id);
-  handleAddToTheQueue(socket, companiesQueue);
+  handleAddToTheQueue(socket, companiesQueue, false, isObserver);
 };
 
 const sendRetryCall = (socket, message) => {

@@ -25,4 +25,8 @@ const encryptDictionary = [
   { key: "cl", name: "color" },
   { key: "fl", name: "logoImage" },
   { key: "ia", name: "isAnonymous" },
+  { key: "esp", name: "speciality" },
+  { key: "doc", name: "document" },
+  { key: "crd", name: "credential" },
+  { key: "oem", name: "oldEmail" },
 ];

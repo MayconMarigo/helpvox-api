@@ -28,7 +28,6 @@ exports.socketProvider = function (io) {
     handleAddAgentToQueueByType(socket, agents, companies);
 
     socket.on("checkCompaniesOnHold", async () => {
-      // console.log("checkCompaniesOnHold");
       if (companiesOnHold.length == 0) return;
 
       agents = modifyAgentStatusByType(agents, socket.id, "busy");
@@ -78,7 +77,7 @@ exports.socketProvider = function (io) {
     socket.on("updatePositionsOnQueue", async (message) => {
       if (companiesOnHold.length == 0) return;
 
-      // console.log("updatePositionsOnQueue");
+      console.log("updatePositionsOnQueue");
       // console.log(companiesOnHold.map((c) => c.id));
       // const { company } = message;
 
@@ -148,6 +147,7 @@ exports.socketProvider = function (io) {
       const agentsArray = filterAvailableAgents(agents);
       const agentToCall = agentsArray[0];
       const companyId = socket.id;
+      // console.log(agents)
       // console.log("Company ligando", companyId);
 
       if (agentsArray.length == 0) {
@@ -199,7 +199,8 @@ exports.socketProvider = function (io) {
         room,
         // { name: randomRoomName },
         token,
-        companyToken
+        companyToken,
+        company.user.name
       );
 
       // return callback({ name: room.name, companyToken });
@@ -217,6 +218,7 @@ exports.socketProvider = function (io) {
         endTime,
         videoUrl,
         isAnonymous,
+        companySocketId,
       } = message;
 
       await CallService.createCall(
@@ -229,6 +231,8 @@ exports.socketProvider = function (io) {
         videoUrl,
         isAnonymous
       );
+
+      // socket.to(companySocketId).emit("getPositionOnQueue", 0);
 
       // const agent = findAgentCaller(agents, agentSocketId);
       // console.log(agentSocketId);
@@ -249,6 +253,8 @@ exports.socketProvider = function (io) {
       const agent = findAgentCaller(agents, agentIdThatNotAnswered);
       agents = await removeAgentFromQueue(agentIdThatNotAnswered, agents);
       handleAddToTheQueue(agent.socket, agents, true);
+
+      socket.to(message.companyId).emit("callNotAnswered");
 
       return;
     });
@@ -285,28 +291,25 @@ exports.socketProvider = function (io) {
     });
 
     socket.on("handleChangeAgentStatusToBusy", (message) => {
-      // console.log("handleChangeAgentStatusToBusy");
       const { id: agentToModify } = message;
       agents = modifyAgentStatusByType(agents, agentToModify, "busy");
     });
 
     socket.on("handleChangeAgentStatusToAvailable", (message) => {
-      // console.log("handleChangeAgentStatusToAvailable");
       const { id: agentToModify } = message;
       agents = modifyAgentStatusByType(agents, agentToModify, "available");
     });
 
     socket.on("getAvailableAgents", (callback) => {
-      // console.log("ALL AGENTS", agents);
       const availableAgents = filterAvailableAgents(agents);
-      // console.log("available agents", availableAgents);
 
-      return callback(availableAgents);
+      const mapper = availableAgents.map((agent) => {
+        return agent.user.name;
+      });
+      callback(mapper);
     });
 
     socket.on("disconnect", () => {
-      const userType = socket.handshake.query.type;
-      console.log(`${userType} desconectado:`, socket.id);
       agents = agents.filter((agent) => agent.id !== socket.id);
     });
   });

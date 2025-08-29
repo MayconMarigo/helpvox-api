@@ -14,7 +14,6 @@ const getUserByEmailAndPassword = async (email, password) => {
 
 const getUserDataByToken = async (token) => {
   const { id } = verifyTokenJwt(token);
-
   const user = await userQueries.getUserDataById(id);
 
   if (!user) throw new Error(JSON.stringify(ERROR_MESSAGES.USER.NOT_FOUND));
@@ -160,6 +159,38 @@ const deleteAgendaById = async (agendaId) => {
   return deleted;
 };
 
+const bulkCreateUsers = async (decodedBody, companyId) => {
+  const mapper = decodedBody.map((user) => {
+    const obj = {
+      ...user,
+      id: user.userId,
+    };
+
+    return obj;
+  });
+
+  const finalMapper = mapper.map((user) => {
+    delete user.userId;
+    return user;
+  });
+
+  const created = await userQueries.bulkCreateUsers(finalMapper, companyId);
+
+  return created;
+};
+
+const getUserByEmailAndCredential = async (email, credential) => {
+  const user = await userQueries.getUserByEmailAndCredential(email, credential);
+
+  return user;
+};
+
+const bulkDeleteUsers = async (companyId) => {
+  const deleted = await userQueries.bulkDeleteUsers(companyId);
+
+  return deleted;
+};
+
 exports.UserService = {
   getUserDataByToken,
   getUserByEmailAndPassword,
@@ -181,4 +212,7 @@ exports.UserService = {
   getScheduledAgendaByDateRange,
   getAllCallsByCompanyId,
   deleteAgendaById,
+  bulkCreateUsers,
+  getUserByEmailAndCredential,
+  bulkDeleteUsers,
 };

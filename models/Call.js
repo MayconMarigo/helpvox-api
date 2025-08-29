@@ -29,6 +29,9 @@ module.exports = (sequelize, DataTypes) => {
     isAnonymous: {
       type: DataTypes.BOOLEAN,
     },
+    isSocketConnection: {
+      type: DataTypes.INTEGER,
+    },
   });
 
   Calls.associate = (models) => {

@@ -13,10 +13,10 @@ const socketPort = 8081;
 
 const app = express();
 const server = createServer(app);
-// const io = new Server(server, {
-//   path: "/ws",
-//   cors: { origin: "*", methods: ["GET", "POST"] },
-// });
+const io = new Server(server, {
+  path: "/ws",
+  cors: { origin: "*", methods: ["GET", "POST"] },
+});
 
 let corsOptions = {
   origin: [
@@ -27,18 +27,18 @@ let corsOptions = {
   ],
 };
 
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
-// socketProvider(io);
+socketProvider(io);
 routesProvider(app);
 
 app.listen(expressPort, () => {
   console.log(`Server listening on port ${expressPort}`);
 });
 
-// server.listen(socketPort, () => {
-//   console.log(`Socket server listening on port ${socketPort}`);
-// });
+server.listen(socketPort, () => {
+  console.log(`Socket server listening on port ${socketPort}`);
+});

@@ -1,7 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define("users", {
     id: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING(36),
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     password: {
       type: DataTypes.STRING(100),
-      allowNull: false,
+      defaultValue: null,
     },
     status: {
       type: DataTypes.INTEGER,
@@ -31,7 +31,6 @@ module.exports = (sequelize, DataTypes) => {
     secret2fa: {
       type: DataTypes.STRING(80),
       defaultValue: "",
-      allowNull: false,
     },
     logoImage: {
       type: DataTypes.BLOB("medium"),
@@ -45,7 +44,7 @@ module.exports = (sequelize, DataTypes) => {
     document: {
       type: DataTypes.STRING(20),
     },
-    specialty: {
+    speciality: {
       type: DataTypes.STRING(50),
     },
   });
