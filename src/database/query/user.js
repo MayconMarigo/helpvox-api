@@ -574,11 +574,13 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
         receiver.name AS receiverName,
         caller.speciality as department,
         receiver.speciality,
-        c.startTime,
-        TIME_FORMAT(SEC_TO_TIME(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60) * 60), '%H:%i') AS callDuration
+        DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
+        TIME_FORMAT(SEC_TO_TIME(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60) * 60), '%i') AS callDuration,
+        r.rating
       FROM calls c
       LEFT JOIN users caller ON c.callerId = caller.id
       INNER JOIN users receiver ON c.receiverId = receiver.id
+      LEFT JOIN ratings r on c.callId = r.callId
       WHERE 
         (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
       AND
