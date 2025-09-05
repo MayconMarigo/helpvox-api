@@ -162,6 +162,26 @@ const retrieveValuesFromEncryptedBody = async (body) => {
       transformedValue: decryptWithCypher(body?.oem),
       name: "oldEmail",
     },
+    {
+      key: "dptnm",
+      transformedValue: decryptWithCypher(body?.dptnm),
+      name: "departmentName",
+    },
+    {
+      key: "dptcd",
+      transformedValue: decryptWithCypher(body?.dptcd),
+      name: "departmentCode",
+    },
+    {
+      key: "id",
+      transformedValue: decryptWithCypher(body?.id),
+      name: "id",
+    },
+    {
+      key: "rl",
+      transformedValue: decryptWithCypher(body?.rl),
+      name: "role",
+    },
   ];
 
   const decryptedBody = {};

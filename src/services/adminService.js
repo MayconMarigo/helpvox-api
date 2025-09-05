@@ -33,7 +33,10 @@ const findAllCallsByUserIdAndType = async (
 };
 
 const updateUserByUserEmailOrName = async (payload, userTypeId) => {
-  const updated = await adminQueries.updateUserByUserEmailOrName(payload, userTypeId);
+  const updated = await adminQueries.updateUserByUserEmailOrName(
+    payload,
+    userTypeId
+  );
 
   return updated;
 };
@@ -50,8 +53,8 @@ const getAllUsersNameAndId = async () => {
   return users;
 };
 
-const getDashboardInfo = async () => {
-  const info = await adminQueries.getDashboardInfo();
+const getDashboardInfo = async (companyId) => {
+  const info = await adminQueries.getDashboardInfo(companyId);
 
   return info;
 };
@@ -66,6 +69,12 @@ const getAgendaByDateRange = async (startDate, endDate, userId) => {
   return agenda;
 };
 
+const getDashboardCSVInfo = async () => {
+  const info = await adminQueries.getDashboardCSVInfo();
+
+  return info;
+};
+
 exports.adminService = {
   createUser,
   updateUserByUserEmailOrName,
@@ -75,4 +84,5 @@ exports.adminService = {
   getDashboardInfo,
   getAgendaByDateRange,
   getAllUsersNameAndId,
+  getDashboardCSVInfo,
 };

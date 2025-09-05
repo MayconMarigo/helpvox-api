@@ -4,16 +4,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      allowNull: false
+      allowNull: false,
     },
     rating: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
     },
     callId: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    }
+      type: DataTypes.STRING(60),
+      allowNull: false,
+    },
   });
 
   // Ratings.associate = (models) => {

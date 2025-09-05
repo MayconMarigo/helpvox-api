@@ -104,6 +104,25 @@ const getUserDataById = async (userId) => {
     dataValues.logoImage = logoImage;
   }
 
+  if (dataValues.userTypeId == "2") {
+    const [checkIfHasSpeciality] = await sequelize.query(
+      `
+          SELECT 
+            COUNT(speciality) > 0 as has_speciality 
+          FROM 
+            users 
+          WHERE 
+            createdBy = '${userId}' 
+          AND
+            speciality IS NOT NULL;
+        `
+    );
+
+    const { has_speciality } = checkIfHasSpeciality[0];
+
+    dataValues.hasSpeciality = !!has_speciality;
+  }
+
   if (dataValues.logoImage) {
     const base64Image = dataValues.logoImage.toString("base64");
     const dataUrl = `data:image/png;base64,${base64Image}`;
@@ -182,13 +201,16 @@ const getDashboardInfo = async (userId) => {
   const [calls] = await sequelize.query(`
     SELECT 
       DATE_FORMAT(c.startTime, '%m') AS month,
-      COUNT(*) AS calls_quantity
+      COALESCE(COUNT(*), 0) AS calls_quantity,
+      COALESCE(SUM(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60)), 0) AS minutes_count
     FROM 
       calls c
     JOIN 
-      users u ON c.receiverId = u.id
+      users u ON c.callerId = u.id
     WHERE 
       u.createdBy = '${userId}'
+      AND
+      c.isSocketConnection = 1
     GROUP BY 
       month
     ORDER BY 
@@ -197,33 +219,47 @@ const getDashboardInfo = async (userId) => {
 
   const [callsQty] = await sequelize.query(`
     SELECT 
-      COUNT(c.id) AS calls_quantity 
+      COALESCE(COUNT(c.id), 0) AS calls_quantity
       FROM calls c
       INNER JOIN users u
       ON 
-      c.receiverId = u.id
+      c.callerId = u.id
       WHERE
         u.createdBy = '${userId}'
+      AND
+        c.isSocketConnection = 1
     `);
 
   const [durationInMinutes] = await sequelize.query(`
     SELECT 
-      SUM(TIMESTAMPDIFF(MINUTE, c.startTime, c.endTime)) 
-      AS minutes_count from calls c
+      COALESCE(SUM(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60)), 0) AS minutes_count
+      from calls c
       INNER JOIN users u
       ON 
-      c.receiverId = u.id
+      c.callerId = u.id
       WHERE
         u.createdBy = '${userId}'
+      AND
+        c.isSocketConnection = 1
     `);
 
   const { calls_quantity } = callsQty[0];
   const { minutes_count } = durationInMinutes[0];
 
+  const [userSpeciality] = await sequelize.query(
+    `
+      SELECT COUNT(speciality) > 0 as has_speciality from users
+      WHERE createdBy = '${userId}'
+    `
+  );
+
+  const { has_speciality } = userSpeciality[0];
+
   return {
     calls,
-    calls_quantity,
-    minutes_count,
+    calls_quantity: `${calls_quantity}`,
+    minutes_count: `${minutes_count}`,
+    hasSpeciality: !!has_speciality,
   };
 };
 
@@ -249,7 +285,7 @@ const getAllCallsByUserId = async (startDate, endDate, userId) => {
       c.startTime,
       c.endTime,
       c.videoUrl,
-      TIMEDIFF(c.endTime, c.startTime) AS callDuration
+      TIME_FORMAT(SEC_TO_TIME(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60) * 60), '%H:%i') AS callDuration
     FROM calls c
     LEFT JOIN users caller ON c.callerId = caller.id
     INNER JOIN users receiver ON c.receiverId = receiver.id
@@ -350,8 +386,9 @@ const getAllUsersByCompanyId = async (companyId) => {
       "name",
       "email",
       "phone",
-      "status",
       [literal("document"), "cpf"],
+      "speciality",
+      "status",
     ],
   });
 
@@ -380,6 +417,7 @@ const createUser = async (payload, companyId) => {
     userTypeId,
     document,
     speciality = null,
+    role = null,
   } = payload;
 
   const checkIfUserIsWorker = (type) => type == 4;
@@ -415,7 +453,7 @@ const createUser = async (payload, companyId) => {
       updatedAt: new Date(),
       createdBy: companyId,
       document,
-      speciality,
+      speciality: role,
     },
   });
 
@@ -423,16 +461,28 @@ const createUser = async (payload, companyId) => {
 };
 
 const updateUserByUserEmail = async (payload) => {
-  const { name, email, phone, password, status, userTypeId } = payload;
+  const { name, email, phone, password, status, userTypeId, speciality } =
+    payload;
+
+  const formattedPayload = { ...payload };
+
+  delete formattedPayload.encryptedPassword;
+
+  if (!payload.password) {
+    delete formattedPayload.password;
+  }
+
+  if (!payload.phone) {
+    delete formattedPayload.phone;
+  }
+
+  if (speciality == 0) {
+    delete formattedPayload.speciality;
+  }
 
   const updated = await User.update(
     {
-      name,
-      email,
-      phone,
-      password,
-      status,
-      userTypeId,
+      ...formattedPayload,
       updatedAt: new Date(),
     },
     {
@@ -522,8 +572,10 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
       SELECT
         COALESCE(caller.name, "Anônimo") AS callerName,
         receiver.name AS receiverName,
+        caller.speciality as department,
         receiver.speciality,
-        c.startTime
+        c.startTime,
+        TIME_FORMAT(SEC_TO_TIME(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60) * 60), '%H:%i') AS callDuration
       FROM calls c
       LEFT JOIN users caller ON c.callerId = caller.id
       INNER JOIN users receiver ON c.receiverId = receiver.id
@@ -534,7 +586,45 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
           `
   );
 
-  return calls;
+  const [callsQty] = await sequelize.query(`
+    SELECT 
+      COALESCE(COUNT(c.id), 0) AS calls_quantity
+      FROM calls c
+      INNER JOIN users u
+      ON 
+      c.callerId = u.id
+      WHERE
+        u.createdBy = '${companyId}'
+      AND
+        c.isSocketConnection = 1
+      AND
+        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
+    `);
+
+  const [durationInMinutes] = await sequelize.query(`
+    SELECT 
+      COALESCE(SUM(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60)), 0) AS minutes_count
+      from calls c
+      INNER JOIN users u
+      ON 
+      c.callerId = u.id
+      WHERE
+        u.createdBy = '${companyId}'
+      AND
+        c.isSocketConnection = 1
+      AND
+        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
+    `);
+
+  const { calls_quantity } = callsQty[0];
+  const { minutes_count } = durationInMinutes[0];
+
+  const dashboardItems = [
+    { title: "Atendimentos", value: calls_quantity },
+    { title: "Total de Minutos", value: minutes_count },
+  ];
+
+  return { calls, dashboardItems };
 };
 
 const deleteAgendaById = async (agendaId) => {
@@ -550,7 +640,6 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   const usersList = decodedBody.map((user) => {
     return {
       ...user,
-      password: "",
       logoImage: null,
       colorScheme: null,
       status: Number(user.status) || 1,
@@ -559,7 +648,6 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: companyId,
-      speciality: null,
     };
   });
 
@@ -567,9 +655,9 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   return created;
 };
 
-const getUserByEmailAndCredential = async (email, credential) => {
+const getUserByEmailAndCredential = async (email, password) => {
   const data = await User.findOne({
-    where: { email, status: 1, userTypeId: 4 },
+    where: { email, password, status: 1, userTypeId: 4 },
     attributes: ["id", "name", "email", "userTypeId"],
   });
 
@@ -577,30 +665,30 @@ const getUserByEmailAndCredential = async (email, credential) => {
 
   const { dataValues } = data;
 
-  const [findUsersAllowedList] = await sequelize.query(`
-    SELECT DISTINCT(u.id) FROM credentials c
-    INNER JOIN users u
-    ON
-    c.userId = u.createdBy
-    where c.id = '${credential}'
-    `);
+  // const [findUsersAllowedList] = await sequelize.query(`
+  //   SELECT DISTINCT(u.id) FROM credentials c
+  //   INNER JOIN users u
+  //   ON
+  //   c.userId = u.createdBy
+  //   where c.id = '${credential}'
+  //   `);
 
-  const allowed = !!findUsersAllowedList.find(
-    (user) => user.id == dataValues.id
-  );
+  // const allowed = !!findUsersAllowedList.find(
+  //   (user) => user.id == dataValues.id
+  // );
 
-  if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
+  // if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
 
-  const [createdByData] = await sequelize.query(
-    `
-      SELECT 
-      u.logoImage
-      FROM users u 
-      INNER JOIN credentials c 
-      ON c.userId = u.id 
-      WHERE c.id = '${credential}'
-    `
-  );
+  // const [createdByData] = await sequelize.query(
+  //   `
+  //     SELECT
+  //     u.logoImage
+  //     FROM users u
+  //     INNER JOIN credentials c
+  //     ON c.userId = u.id
+  //     WHERE c.id = '${credential}'
+  //   `
+  // );
 
   // const logoImage = createdByData[0]?.logoImage;
 
@@ -638,6 +726,35 @@ const getUserTypeIdById = async (userId) => {
   return userTypeId;
 };
 
+const getDashboardCSVInfo = async (companyId) => {
+  const [data] = await sequelize.query(
+    `
+    SELECT 
+      u.speciality as department,
+      COALESCE(COUNT(*), 0) AS calls_quantity,
+      COALESCE(SUM(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60)), 0) AS minutes_count,
+      DATE_FORMAT(c.startTime, '%m') AS month
+    FROM 
+      calls c
+    INNER JOIN users u
+    ON u.id = c.callerId
+    INNER JOIN users w
+    ON u.createdBy = w.id
+    WHERE
+      c.isSocketConnection = 1
+    AND
+      c.connected = 1
+    AND
+      u.createdBy = '${companyId}'
+    GROUP BY 
+      department,
+      month; 
+    `
+  );
+
+  return data;
+};
+
 exports.userQueries = {
   findAdminUserByEmail,
   findUserByEmailAndPassword,
@@ -662,4 +779,5 @@ exports.userQueries = {
   getUserByEmailAndCredential,
   bulkDeleteUsers,
   getUserTypeIdById,
+  getDashboardCSVInfo,
 };

@@ -179,8 +179,8 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   return created;
 };
 
-const getUserByEmailAndCredential = async (email, credential) => {
-  const user = await userQueries.getUserByEmailAndCredential(email, credential);
+const getUserByEmailAndCredential = async (email, password) => {
+  const user = await userQueries.getUserByEmailAndCredential(email, password);
 
   return user;
 };
@@ -189,6 +189,12 @@ const bulkDeleteUsers = async (companyId) => {
   const deleted = await userQueries.bulkDeleteUsers(companyId);
 
   return deleted;
+};
+
+const getDashboardCSVInfo = async (companyId) => {
+  const info = await userQueries.getDashboardCSVInfo(companyId);
+
+  return info;
 };
 
 exports.UserService = {
@@ -215,4 +221,5 @@ exports.UserService = {
   bulkCreateUsers,
   getUserByEmailAndCredential,
   bulkDeleteUsers,
+  getDashboardCSVInfo,
 };

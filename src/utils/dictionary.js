@@ -29,4 +29,8 @@ const encryptDictionary = [
   { key: "doc", name: "document" },
   { key: "crd", name: "credential" },
   { key: "oem", name: "oldEmail" },
+  { key: "dptnm", name: "departmentName" },
+  { key: "dptcd", name: "departmentCode" },
+  { key: "id", name: "id" },
+  { key: "rl", name: "role" },
 ];

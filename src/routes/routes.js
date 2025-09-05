@@ -4,6 +4,7 @@ const { isAuthenticated } = require("../middlewares/authenticated");
 const { isCredential } = require("../middlewares/credential");
 const { adminService } = require("../services/adminService");
 const { agendaService } = require("../services/agendaService");
+const { departmentsService } = require("../services/departmentsService");
 const { CallService } = require("../services/callService");
 const { credentialsService } = require("../services/credentialsService");
 const { generateMeetingInformation } = require("../services/dailyJsService");
@@ -83,9 +84,25 @@ exports.routesProvider = (app) => {
     }
   });
 
-  app.get("/api/admin/dashboards", isAdmin, async (req, res) => {
+  app.get(
+    "/api/admin/dashboards/:companyId/get-all",
+    isAdmin,
+    async (req, res) => {
+      try {
+        const companyId = req.params.companyId ?? null;
+        const info = await adminService.getDashboardInfo(companyId);
+
+        res.status(200).send(info);
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.get("/api/admin/dashboards/csv", isAdmin, async (req, res) => {
     try {
-      const info = await adminService.getDashboardInfo();
+      const info = await adminService.getDashboardCSVInfo();
 
       res.status(200).send(info);
     } catch (error) {
@@ -93,6 +110,22 @@ exports.routesProvider = (app) => {
       res.status(code).send({ message });
     }
   });
+
+  app.get(
+    "/api/:companyId/dashboards/csv",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { companyId } = req.params;
+        const info = await UserService.getDashboardCSVInfo(companyId);
+
+        res.status(200).send(info);
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
 
   app.get("/api/admin/schedule/:userId/get-all", isAdmin, async (req, res) => {
     try {
@@ -120,10 +153,8 @@ exports.routesProvider = (app) => {
     }
   });
 
-  // ROTAS <> ADMIN
-
   app.get(
-    "/api/calls/:companyId/get-all",
+    "/api/enterprise/calls/:companyId/get-all",
     isAuthenticated,
     async (req, res) => {
       try {
@@ -139,6 +170,72 @@ exports.routesProvider = (app) => {
         );
 
         res.status(200).send(calls);
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.post(
+    "/api/enterprise/calls/rating/:callId",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { callId } = req.params;
+
+        const { rating } = req.body;
+
+        await RatingService.createRating(callId, rating);
+
+        res.status(200).send({ ok: true });
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.get(
+    "/api/departments/:companyId/get-all",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { companyId } = req.params;
+
+        ValidationUtils.checkTransformedValues(req.query);
+
+        const departments =
+          await departmentsService.getAllDepartmentsByCompanyId(companyId);
+
+        res.status(200).send(departments);
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.post(
+    "/api/:companyId/department/create",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { companyId } = req.params;
+
+        const decodedBody = await CryptoUtils.retrieveValuesFromEncryptedBody(
+          req.body
+        );
+
+        ValidationUtils.checkRequiredValues(
+          ["departmentName", "departmentCode"],
+          Object.keys(decodedBody)
+        );
+        ValidationUtils.checkTransformedValues(decodedBody);
+
+        await departmentsService.createDepartment(decodedBody, companyId);
+
+        res.status(200).send({ success: true });
       } catch (error) {
         const { code, message } = extractCodeAndMessageFromError(error.message);
         res.status(code).send({ message });
@@ -335,10 +432,9 @@ exports.routesProvider = (app) => {
         req.body
       );
       ValidationUtils.checkRequiredValues(
-        ["name", "email", "password", "status"],
+        ["name", "email", "status"],
         Object.keys(decodedBody)
       );
-      ValidationUtils.checkTransformedValues(decodedBody);
 
       await UserService.updateUserByUserEmail(decodedBody);
 
@@ -496,9 +592,8 @@ exports.routesProvider = (app) => {
         participants.receiver = secondUserInfo;
       };
 
-      
       findCallerAndReceiver(user01Info, user02Info);
-      
+
       console.log(participants);
       const callerId = participants.caller.user_id;
       const receiverId = participants.receiver.user_id;
@@ -599,8 +694,6 @@ exports.routesProvider = (app) => {
         req.body
       );
 
-      console.log(decodedBody);
-
       const { companyId } = req.params;
 
       ValidationUtils.checkRequiredValues(
@@ -649,6 +742,42 @@ exports.routesProvider = (app) => {
         );
         res.status(201).send({ created });
       } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.post(
+    "/api/:companyId/departments/create/bulk",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const cloneBody = [...req.body];
+
+        const decodeUserArray = async (usersArray) => {
+          const t = [];
+          for (const user of usersArray) {
+            console.log(user);
+            const temp = await CryptoUtils.retrieveValuesFromEncryptedBody(
+              user
+            );
+            t.push(temp);
+          }
+          return t;
+        };
+
+        const decodedBody = await decodeUserArray(cloneBody);
+
+        const { companyId } = req.params;
+
+        const created = await departmentsService.bulkCreateDepartments(
+          decodedBody,
+          companyId
+        );
+        res.status(201).send({ created });
+      } catch (error) {
+        console.log(error);
         const { code, message } = extractCodeAndMessageFromError(error.message);
         res.status(code).send({ message });
       }
@@ -766,16 +895,16 @@ exports.routesProvider = (app) => {
         req.body
       );
       ValidationUtils.checkRequiredValues(
-        ["email", "credential"],
+        ["email", "password"],
         Object.keys(decodedBody)
       );
       ValidationUtils.checkTransformedValues(decodedBody);
 
-      const { email, credential } = decodedBody;
+      const { email, password } = decodedBody;
 
       const user = await UserService.getUserByEmailAndCredential(
         email,
-        credential
+        password
       );
 
       const token = TokenService.createEncodedToken(user);
