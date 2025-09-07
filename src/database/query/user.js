@@ -420,6 +420,17 @@ const createUser = async (payload, companyId) => {
     role = null,
   } = payload;
 
+  const formatPhone = (value) => {
+    if (!value) return "";
+    let a = value;
+    a = a.replace("(", "");
+    a = a.replace(")", "");
+    a = a.replace("-", "");
+    a = a.replace(" ", "");
+
+    return a;
+  };
+
   const checkIfUserIsWorker = (type) => type == 4;
 
   if (!checkIfUserIsWorker(userTypeId))
@@ -442,7 +453,7 @@ const createUser = async (payload, companyId) => {
       id: Crypto.randomUUID(),
       name,
       email,
-      phone,
+      phone: formatPhone(phone),
       password,
       logoImage: logoImageFromCompany,
       colorScheme: colorSchemeFromCompany,

@@ -20,6 +20,17 @@ const createUser = async (payload) => {
     speciality,
   } = payload;
 
+  const formatPhone = (value) => {
+    if (!value) return "";
+    let a = value;
+    a = a.replace("(", "");
+    a = a.replace(")", "");
+    a = a.replace("-", "");
+    a = a.replace(" ", "");
+
+    return a;
+  };
+
   const secret2fa = CryptoUtils.generateBase32Hash();
   const [user, created] = await User.findOrCreate({
     where: { email },
@@ -27,7 +38,7 @@ const createUser = async (payload) => {
       id: Crypto.randomUUID(),
       name,
       email,
-      phone,
+      phone: formatPhone(phone),
       password,
       logoImage,
       colorScheme: color,
