@@ -10,12 +10,10 @@ module.exports = (sequelize, DataTypes) => {
       unique: true,
     },
     callerId: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.STRING,
     },
     receiverId: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.STRING,
     },
     callUrl: {
       type: DataTypes.STRING,

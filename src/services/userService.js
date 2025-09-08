@@ -171,6 +171,7 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
 
   const finalMapper = mapper.map((user) => {
     delete user.userId;
+    delete user.encryptedPassword;
     return user;
   });
 
