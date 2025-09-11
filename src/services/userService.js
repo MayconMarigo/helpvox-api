@@ -160,19 +160,19 @@ const deleteAgendaById = async (agendaId) => {
 };
 
 const bulkCreateUsers = async (decodedBody, companyId) => {
-  const mapper = decodedBody.map((user) => {
-    const obj = {
+  const pws = decodedBody.map((value) =>
+    CryptoUtils.convertToDatabaseFormatedPassword(String(value.phone))
+  );
+  const promises = Promise.all(pws);
+
+  const passwords = await promises;
+
+  const finalMapper = decodedBody.map((user, index) => {
+    return {
       ...user,
-      id: user.userId,
+      email: user.id,
+      password: passwords[index],
     };
-
-    return obj;
-  });
-
-  const finalMapper = mapper.map((user) => {
-    delete user.userId;
-    delete user.encryptedPassword;
-    return user;
   });
 
   const created = await userQueries.bulkCreateUsers(finalMapper, companyId);
