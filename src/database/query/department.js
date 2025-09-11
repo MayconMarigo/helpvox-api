@@ -4,7 +4,7 @@ const { sequelize } = require("../database");
 const getAllDepartmentsByCompanyId = async (companyId) => {
   const data = Department.findAll({
     where: { userId: companyId },
-    attributes: ["id", "name", "code"],
+    attributes: ["name", "code"],
   });
 
   return data;
