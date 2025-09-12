@@ -560,13 +560,9 @@ exports.routesProvider = (app) => {
   // Rotas POST
 
   app.post("/api/call/end", async (req, res) => {
-    // const { meeting_id, room } = req.body.payload;
+    const { meeting_id, room } = req.body.payload;
 
-    // if (!meeting_id) return res.status(404).send({ ok: false });
-
-    // const meeting_id = "213ca2fc-0d6c-4481-8855-1f11604e53c3";
-    const meeting_id = "92420c20-ec72-4758-833b-3c66c52eff9c";
-    const room = "123";
+    if (!meeting_id) return res.status(404).send({ ok: false });
 
     try {
       const meetingInfo = await generateMeetingInformation(meeting_id);
