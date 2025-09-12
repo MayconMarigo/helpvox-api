@@ -180,8 +180,8 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   return created;
 };
 
-const getUserByEmailAndCredential = async (email, password) => {
-  const user = await userQueries.getUserByEmailAndCredential(email, password);
+const getUserByEmailAndCredential = async (email, phone) => {
+  const user = await userQueries.getUserByEmailAndCredential(email, phone);
 
   return user;
 };

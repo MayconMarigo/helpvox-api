@@ -888,17 +888,14 @@ exports.routesProvider = (app) => {
         req.body
       );
       ValidationUtils.checkRequiredValues(
-        ["email", "password"],
+        ["email", "phone"],
         Object.keys(decodedBody)
       );
       ValidationUtils.checkTransformedValues(decodedBody);
 
-      const { email, password } = decodedBody;
+      const { email, phone } = decodedBody;
 
-      const user = await UserService.getUserByEmailAndCredential(
-        email,
-        password
-      );
+      const user = await UserService.getUserByEmailAndCredential(email, phone);
 
       const token = TokenService.createEncodedToken(user);
 
