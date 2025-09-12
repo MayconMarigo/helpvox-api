@@ -16,18 +16,6 @@ const findValidCredential = async (credential) => {
 };
 
 const getUserAgendaWithCredential = async (startDate, endDate, credential) => {
-  // const [findUsersAllowedList] = await sequelize.query(`
-  //   SELECT DISTINCT(u.id) FROM credentials c
-  //   INNER JOIN users u
-  //   ON
-  //   c.userId = u.createdBy
-  //   where c.id = '${credential}'
-  //   `);
-
-  // const allowed = !!findUsersAllowedList.find((user) => user.id == userId);
-
-  // if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
-
   const [agendas] = await sequelize.query(
     `
       SELECT
@@ -52,8 +40,6 @@ const getUserAgendaWithCredential = async (startDate, endDate, credential) => {
       a.scheduledDateTime asc
     `
   );
-  // CONCAT('${BASE_DAILY_JS_URL_FRONTEND}', a.callUrl) as url_chamada,
-
   const data = [];
   agendas.map((agenda) => {
     const finder = data.find((value) => value.data == agenda.data);

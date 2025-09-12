@@ -61,7 +61,8 @@ exports.socketProvider = function (io) {
         companyToCallUser.id,
         room,
         agentToken,
-        companyToken
+        companyToken,
+        companyToCall.user.name
       );
 
       companiesOnHold = await removeAgentFromQueue(
@@ -307,6 +308,11 @@ exports.socketProvider = function (io) {
         return agent.user.name;
       });
       callback(mapper);
+    });
+
+    socket.on("handleDisconnectAgent", () => {
+      console.log("Agente disconectado " + socket.id);
+      socket.disconnect();
     });
 
     socket.on("disconnect", () => {
