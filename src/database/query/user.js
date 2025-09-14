@@ -281,18 +281,19 @@ const getAllCallsByUserId = async (startDate, endDate, userId) => {
   const [reports] = await sequelize.query(`
     SELECT
       COALESCE(caller.name, "Anônimo") AS callerName,
-      receiver.name AS receiverName,
       c.startTime,
-      c.endTime,
-      c.videoUrl,
       TIME_FORMAT(SEC_TO_TIME(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60) * 60), '%H:%i') AS callDuration
     FROM calls c
     LEFT JOIN users caller ON c.callerId = caller.id
     INNER JOIN users receiver ON c.receiverId = receiver.id
     WHERE 
-    (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
+    c.startTime BETWEEN 
+        STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
+    AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
     AND
     c.receiverId = '${userId}'
+    AND
+    c.isSocketConnection = 1;
     `);
 
   return reports;
@@ -386,7 +387,7 @@ const getAllUsersByCompanyId = async (companyId) => {
       "name",
       "email",
       "phone",
-      [literal("document"), "cpf"],
+      // [literal("document"), "cpf"],
       "speciality",
       "status",
     ],
@@ -580,54 +581,65 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
 
   const [calls] = await sequelize.query(
     `
-      SELECT
-        COALESCE(caller.name, "Anônimo") AS callerName,
-        receiver.name AS receiverName,
-        caller.speciality as department,
-        receiver.speciality,
-        DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
-        TIME_FORMAT(SEC_TO_TIME(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60) * 60), '%i') AS callDuration,
-        r.rating
-      FROM calls c
-      LEFT JOIN users caller ON c.callerId = caller.id
-      INNER JOIN users receiver ON c.receiverId = receiver.id
-      LEFT JOIN ratings r on c.callId = r.callId
-      WHERE 
-        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
-      AND
-      caller.createdBy = '${companyId}'
-          `
+     SELECT
+    COALESCE(caller.name, "Anônimo") AS callerName,
+    receiver.name AS receiverName,
+    caller.speciality as department,
+    receiver.speciality,
+    DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
+    TIME_FORMAT(SEC_TO_TIME(
+      GREATEST(
+          CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
+        1
+        ) * 60
+      ), '%i') AS callDuration,
+    r.rating
+    FROM calls c
+    LEFT JOIN users caller ON c.callerId = caller.id
+    INNER JOIN users receiver ON c.receiverId = receiver.id
+    LEFT JOIN ratings r on c.callId = r.callId
+    WHERE 
+    c.startTime BETWEEN 
+        STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
+    AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
+    AND
+      c.createdBy = '${companyId}'
+    AND c.isSocketConnection = 1;
+    `
   );
 
   const [callsQty] = await sequelize.query(`
     SELECT 
       COALESCE(COUNT(c.id), 0) AS calls_quantity
       FROM calls c
-      INNER JOIN users u
-      ON 
-      c.callerId = u.id
       WHERE
-        u.createdBy = '${companyId}'
+        c.createdBy = '${companyId}'
       AND
         c.isSocketConnection = 1
       AND
-        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
+      c.startTime BETWEEN 
+        STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
+        AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s');
     `);
 
   const [durationInMinutes] = await sequelize.query(`
     SELECT 
-      COALESCE(SUM(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60)), 0) AS minutes_count
+      TIME_FORMAT(SEC_TO_TIME(
+      GREATEST(
+          CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
+        1
+        ) * 60
+      ), '%i') AS minutes_count
       from calls c
-      INNER JOIN users u
-      ON 
-      c.callerId = u.id
       WHERE
-        u.createdBy = '${companyId}'
+      c.createdBy = '${companyId}'
       AND
-        c.isSocketConnection = 1
+      c.isSocketConnection = 1
       AND
-        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
-    `);
+      c.startTime BETWEEN 
+      STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
+      AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s');
+      `);
 
   const { calls_quantity } = callsQty[0];
   const { minutes_count } = durationInMinutes[0];
@@ -670,13 +682,20 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
 
 const getUserByEmailAndCredential = async (email, phone) => {
   const data = await User.findOne({
-    where: { email, phone, status: 1, userTypeId: 4 },
-    attributes: ["id", "name", "email", "userTypeId"],
+    where: { email, status: 1, userTypeId: 4 },
+    attributes: ["id", "name", "email", "userTypeId", "phone"],
   });
 
   if (!data) throw new Error(JSON.stringify(ERROR_MESSAGES.USER.NOT_FOUND));
 
   const { dataValues } = data;
+
+  const returnedPhone = data.phone;
+
+  if (!returnedPhone)
+    throw new Error(JSON.stringify(ERROR_MESSAGES.USER.HAS_NO_PHONE));
+
+  // if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
 
   // const [findUsersAllowedList] = await sequelize.query(`
   //   SELECT DISTINCT(u.id) FROM credentials c

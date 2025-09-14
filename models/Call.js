@@ -26,6 +26,15 @@ module.exports = (sequelize, DataTypes) => {
       type: "TIMESTAMP",
       allowNull: false,
     },
+    callerId: {
+      type: DataTypes.STRING(36),
+    },
+    receiverId: {
+      type: DataTypes.STRING(36),
+    },
+    createdBy: {
+      type: DataTypes.STRING(36),
+    },
     isAnonymous: {
       type: DataTypes.BOOLEAN,
     },
@@ -35,8 +44,8 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Calls.associate = (models) => {
-    Calls.belongsTo(models.User, { as: "Caller", foreignKey: "callerId" });
-    Calls.belongsTo(models.User, { as: "Receiver", foreignKey: "receiverId" });
+    // Calls.belongsTo(models.User, { as: "Caller", foreignKey: "callerId" });
+    // Calls.belongsTo(models.User, { as: "Receiver", foreignKey: "receiverId" });
   };
 
   return Calls;

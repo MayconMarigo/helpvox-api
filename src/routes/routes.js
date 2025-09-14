@@ -899,7 +899,7 @@ exports.routesProvider = (app) => {
 
       const token = TokenService.createEncodedToken(user);
 
-      return res.status(200).send({ token: token });
+      return res.status(200).send({ token: token, phone: user.phone });
     } catch (error) {
       const { code, message } = extractCodeAndMessageFromError(error.message);
 

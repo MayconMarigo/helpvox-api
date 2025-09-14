@@ -310,8 +310,9 @@ exports.socketProvider = function (io) {
       callback(mapper);
     });
 
-    socket.on("handleDisconnectAgent", () => {
+    socket.on("handleDisconnectAgent", async () => {
       console.log("Agente disconectado " + socket.id);
+      agents = await removeAgentFromQueue(socket.id, agents);
       socket.disconnect();
     });
 

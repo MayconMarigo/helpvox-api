@@ -111,15 +111,22 @@ const getAllCalls = async (startDate, endDate) => {
       COALESCE(caller.name, "Anônimo") AS callerName,
       receiver.name AS receiverName,
       caller.speciality as department,
-      receiver.speciality,
-      DATE_SUB(c.startTime, INTERVAL 3 HOUR) AS startTime,
-      TIME_FORMAT(SEC_TO_TIME(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60) * 60), '%H:%i') AS callDuration
+      DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime,
+      TIME_FORMAT(SEC_TO_TIME(
+      GREATEST(
+          CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
+        1
+        ) * 60
+      ), '%i') AS callDuration,
+      r.rating
     FROM calls c
     LEFT JOIN users caller ON c.callerId = caller.id
     INNER JOIN users receiver ON c.receiverId = receiver.id
-    WHERE (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
-    AND
-    caller.userTypeId = 4
+    LEFT JOIN ratings r on c.callId = r.callId
+    WHERE
+    c.startTime BETWEEN 
+        STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
+    AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
     AND
     c.isSocketConnection = 1
     `);
@@ -128,26 +135,29 @@ const getAllCalls = async (startDate, endDate) => {
     SELECT 
       COALESCE(COUNT(c.id), 0) AS calls_quantity
       FROM calls c
-      INNER JOIN users u
-      ON 
-      c.callerId = u.id
-      AND
+      WHERE
         c.isSocketConnection = 1
       AND
-        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
+        c.startTime BETWEEN 
+          STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
+          AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
     `);
 
   const [durationInMinutes] = await sequelize.query(`
     SELECT 
-      COALESCE(SUM(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60)), 0) AS minutes_count
+      TIME_FORMAT(SEC_TO_TIME(
+      GREATEST(
+          CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
+        1
+        ) * 60
+      ), '%i') AS minutes_count
       from calls c
-      INNER JOIN users u
-      ON 
-      c.callerId = u.id
-      AND
+      WHERE
         c.isSocketConnection = 1
       AND
-        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
+        c.startTime BETWEEN 
+          STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
+          AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
     `);
 
   const { calls_quantity } = callsQty[0];

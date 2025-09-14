@@ -50,11 +50,11 @@ module.exports = (sequelize, DataTypes) => {
 
   User.associate = (models) => {
     User.belongsTo(models.UserType, { foreignKey: "userTypeId" });
-    User.hasMany(models.Call, { as: "CallsAsCaller", foreignKey: "callerId" });
-    User.hasMany(models.Call, {
-      as: "CallsAsReceiver",
-      foreignKey: "receiverId",
-    });
+    // User.hasMany(models.Call, { as: "CallsAsCaller", foreignKey: "callerId" });
+    // User.hasMany(models.Call, {
+    //   as: "CallsAsReceiver",
+    //   foreignKey: "receiverId",
+    // });
     User.hasMany(models.Agenda, {
       as: "AgendasAsCaller",
       foreignKey: "callerId",

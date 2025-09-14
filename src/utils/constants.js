@@ -70,6 +70,11 @@ const ERROR_MESSAGES = {
       message: "Usuário já existe na base de dados.",
       code: 422,
     },
+    HAS_NO_PHONE: {
+      message:
+        "Telefone não cadastrado, por favor acesse a plataforma de talentos para atualizar seus dados.",
+      code: 422,
+    },
   },
   TOKEN: {
     INVALID_TOKEN: {
