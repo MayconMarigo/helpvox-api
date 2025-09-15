@@ -585,7 +585,6 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
     COALESCE(caller.name, "Anônimo") AS callerName,
     receiver.name AS receiverName,
     caller.speciality as department,
-    receiver.speciality,
     DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
     TIME_FORMAT(SEC_TO_TIME(
       GREATEST(
@@ -624,12 +623,12 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
 
   const [durationInMinutes] = await sequelize.query(`
     SELECT 
-      TIME_FORMAT(SEC_TO_TIME(
+      COUNT(TIME_FORMAT(SEC_TO_TIME(
       GREATEST(
           CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
         1
         ) * 60
-      ), '%i') AS minutes_count
+      ), '%i')) AS minutes_count
       from calls c
       WHERE
       c.createdBy = '${companyId}'
@@ -640,6 +639,8 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
       STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
       AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s');
       `);
+
+      console.log(durationInMinutes)
 
   const { calls_quantity } = callsQty[0];
   const { minutes_count } = durationInMinutes[0];

@@ -55,7 +55,8 @@ const handleAddToTheQueue = (
   socket,
   queue,
   isAgent = false,
-  isObserver = false
+  isObserver = false,
+  position = "end"
 ) => {
   let user;
 
@@ -74,7 +75,12 @@ const handleAddToTheQueue = (
     socket,
   };
 
-  queue.push(pushObject);
+  if (position == "end") {
+    queue.push(pushObject);
+    return;
+  }
+
+  queue.unshift(pushObject);
 };
 
 const handleAddAgentToQueueByType = async (

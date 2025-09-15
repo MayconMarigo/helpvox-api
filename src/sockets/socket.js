@@ -24,6 +24,7 @@ exports.socketProvider = function (io) {
   let agents = [];
   let companies = [];
   let companiesOnHold = [];
+  let companyOnCalling = [];
   io.on("connection", async (socket) => {
     handleAddAgentToQueueByType(socket, agents, companies);
 
@@ -70,6 +71,11 @@ exports.socketProvider = function (io) {
         companiesOnHold
       );
 
+      companyOnCalling.push({
+        companySocket: companyToCall.socket,
+        agentId: agent.id,
+      });
+
       socket.to(companyToCall.id).emit("getPositionOnQueue", 0);
 
       sendUpdateCompaniesQueueStatus(socket, companiesOnHold);
@@ -77,11 +83,6 @@ exports.socketProvider = function (io) {
 
     socket.on("updatePositionsOnQueue", async (message) => {
       if (companiesOnHold.length == 0) return;
-
-      console.log("updatePositionsOnQueue");
-      // console.log(companiesOnHold.map((c) => c.id));
-      // const { company } = message;
-
       sendUpdateCompaniesQueueStatus(socket, companiesOnHold);
 
       return;
@@ -98,6 +99,8 @@ exports.socketProvider = function (io) {
         content: response,
         redirect: true,
       });
+
+      companyOnCalling = [];
 
       sendUpdateCompaniesQueueStatus(agentHost.socket, companiesOnHold);
     });
@@ -148,8 +151,6 @@ exports.socketProvider = function (io) {
       const agentsArray = filterAvailableAgents(agents);
       const agentToCall = agentsArray[0];
       const companyId = socket.id;
-      // console.log(agents)
-      // console.log("Company ligando", companyId);
 
       if (agentsArray.length == 0) {
         if (companiesOnHold.find((company) => company.id == socket.id)) return;
@@ -204,6 +205,11 @@ exports.socketProvider = function (io) {
         company.user.name
       );
 
+      companyOnCalling.push({
+        companySocket: company.socket,
+        agentId: agentToCall.socket.id,
+      });
+
       // return callback({ name: room.name, companyToken });
       // return callback({ name: randomRoomName, companyToken });
     });
@@ -251,9 +257,9 @@ exports.socketProvider = function (io) {
 
     socket.on("handleCallNextAgentAfterFailedCall", async (message) => {
       const agentIdThatNotAnswered = message.agentId;
-      const agent = findAgentCaller(agents, agentIdThatNotAnswered);
+      // const agent = findAgentCaller(agents, agentIdThatNotAnswered);
       agents = await removeAgentFromQueue(agentIdThatNotAnswered, agents);
-      handleAddToTheQueue(agent.socket, agents, true);
+      // handleAddToTheQueue(agent.socket, agents, true);
 
       socket.to(message.companyId).emit("callNotAnswered");
 
@@ -311,12 +317,28 @@ exports.socketProvider = function (io) {
     });
 
     socket.on("handleDisconnectAgent", async () => {
-      console.log("Agente disconectado " + socket.id);
+      console.log("Agente desconectado " + socket.id);
       agents = await removeAgentFromQueue(socket.id, agents);
       socket.disconnect();
     });
 
     socket.on("disconnect", () => {
+      const socketId = socket.id;
+      const agentIdOnCall = companyOnCalling[0]?.agentId;
+
+      if (agentIdOnCall == socketId && companyOnCalling.length > 0) {
+        handleAddToTheQueue(
+          companyOnCalling[0].companySocket,
+          companiesOnHold,
+          false,
+          false,
+          "start"
+        );
+        companyOnCalling = [];
+
+        sendUpdateCompaniesQueueStatus(socket, companiesOnHold);
+      }
+
       agents = agents.filter((agent) => agent.id !== socket.id);
     });
   });

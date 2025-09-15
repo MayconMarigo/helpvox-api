@@ -145,12 +145,12 @@ const getAllCalls = async (startDate, endDate) => {
 
   const [durationInMinutes] = await sequelize.query(`
     SELECT 
-      TIME_FORMAT(SEC_TO_TIME(
+      COUNT(TIME_FORMAT(SEC_TO_TIME(
       GREATEST(
           CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
         1
         ) * 60
-      ), '%i') AS minutes_count
+      ), '%i')) AS minutes_count
       from calls c
       WHERE
         c.isSocketConnection = 1
