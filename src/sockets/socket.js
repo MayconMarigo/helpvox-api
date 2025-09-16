@@ -322,11 +322,38 @@ exports.socketProvider = function (io) {
       socket.disconnect();
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       const socketId = socket.id;
       const agentIdOnCall = companyOnCalling[0]?.agentId;
 
-      if (agentIdOnCall == socketId && companyOnCalling.length > 0) {
+      const needToInsertCompanyOnStartOfQueue =
+        agentIdOnCall == socketId && companyOnCalling.length > 0;
+
+      const neetToRemoveCompanyFromHoldUpponDisconnect = !!findCompanyCaller(
+        companiesOnHold,
+        socketId
+      );
+
+      const needToRemoveCompanyFromOnCallUpponDisconnect = !!findCompanyCaller(
+        companyOnCalling,
+        socketId
+      );
+
+      if (neetToRemoveCompanyFromHoldUpponDisconnect) {
+        companiesOnHold = companiesOnHold.filter(
+          (company) => company.id !== socketId
+        );
+
+        sendUpdateCompaniesQueueStatus(socket, companiesOnHold);
+      }
+
+      if (needToRemoveCompanyFromOnCallUpponDisconnect) {
+        companyOnCalling = [];
+
+        sendUpdateCompaniesQueueStatus(socket, companiesOnHold);
+      }
+
+      if (needToInsertCompanyOnStartOfQueue) {
         handleAddToTheQueue(
           companyOnCalling[0].companySocket,
           companiesOnHold,
