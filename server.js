@@ -14,7 +14,7 @@ const socketPort = 8081;
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
-  path: "/ws/socket.io",
+  path: "/ws",
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
