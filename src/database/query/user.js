@@ -387,7 +387,7 @@ const getAllUsersByCompanyId = async (companyId) => {
       "name",
       "email",
       "phone",
-      // [literal("document"), "cpf"],
+      [literal("document"), "cpf"],
       "speciality",
       "status",
     ],
@@ -585,6 +585,7 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
     COALESCE(caller.name, "Anônimo") AS callerName,
     receiver.name AS receiverName,
     caller.speciality as department,
+    receiver.speciality as speciality,
     DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
     TIME_FORMAT(SEC_TO_TIME(
       GREATEST(
@@ -640,8 +641,6 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
       AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s');
       `);
 
-      console.log(durationInMinutes)
-
   const { calls_quantity } = callsQty[0];
   const { minutes_count } = durationInMinutes[0];
 
@@ -677,24 +676,21 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
     };
   });
 
+  console.log(usersList);
+
   const created = await User.bulkCreate(usersList);
   return created;
 };
 
-const getUserByEmailAndCredential = async (email, phone) => {
+const getUserByEmailAndCredential = async (email, password) => {
   const data = await User.findOne({
-    where: { email, status: 1, userTypeId: 4 },
+    where: { email, password, status: 1, userTypeId: 4 },
     attributes: ["id", "name", "email", "userTypeId", "phone"],
   });
 
   if (!data) throw new Error(JSON.stringify(ERROR_MESSAGES.USER.NOT_FOUND));
 
   const { dataValues } = data;
-
-  const returnedPhone = data.phone;
-
-  if (!returnedPhone)
-    throw new Error(JSON.stringify(ERROR_MESSAGES.USER.HAS_NO_PHONE));
 
   // if (!allowed) throw new Error(JSON.stringify(ERROR_MESSAGES.UNAUTHORIZED));
 

@@ -103,61 +103,54 @@ const getAllCalls = async (startDate, endDate) => {
     finalDate = new Date();
   }
 
-  initDate = startDate.split("-").reverse().join("-");
-  finalDate = endDate.split("-").reverse().join("-");
+  initDate = startDate.split("/").reverse().join("/");
+  finalDate = endDate.split("/").reverse().join("/");
 
+  console.log(initDate);
+  console.log(finalDate);
   const [calls] = await sequelize.query(`
     SELECT
       COALESCE(caller.name, "Anônimo") AS callerName,
       receiver.name AS receiverName,
       caller.speciality as department,
-      DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime,
-      TIME_FORMAT(SEC_TO_TIME(
-      GREATEST(
-          CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
-        1
-        ) * 60
-      ), '%i') AS callDuration,
-      r.rating
+      receiver.speciality,
+      DATE_SUB(c.startTime, INTERVAL 3 HOUR) AS startTime,
+      TIME_FORMAT(SEC_TO_TIME(GREATEST(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 1) * 60), '%H:%i') AS callDuration
     FROM calls c
     LEFT JOIN users caller ON c.callerId = caller.id
     INNER JOIN users receiver ON c.receiverId = receiver.id
-    LEFT JOIN ratings r on c.callId = r.callId
-    WHERE
-    c.startTime BETWEEN 
-        STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
-    AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
+    WHERE (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
+    AND
+    caller.userTypeId = 4
     AND
     c.isSocketConnection = 1
     `);
 
   const [callsQty] = await sequelize.query(`
-    SELECT 
+    SELECT
       COALESCE(COUNT(c.id), 0) AS calls_quantity
       FROM calls c
-      WHERE
+      INNER JOIN users u
+      ON
+      c.callerId = u.id
+      AND
         c.isSocketConnection = 1
       AND
-        c.startTime BETWEEN 
-          STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
-          AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
+        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
     `);
 
   const [durationInMinutes] = await sequelize.query(`
-    SELECT 
-      COUNT(TIME_FORMAT(SEC_TO_TIME(
-      GREATEST(
-          CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
-        1
-        ) * 60
-      ), '%i')) AS minutes_count
+      SELECT 
+      COUNT
+      (TIME_FORMAT(SEC_TO_TIME(GREATEST(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 1) * 60), '%i')) AS minutes_count
       from calls c
-      WHERE
+      INNER JOIN users u
+      ON
+      c.callerId = u.id
+      AND
         c.isSocketConnection = 1
       AND
-        c.startTime BETWEEN 
-          STR_TO_DATE('${initDate} 00:00:00','%d/%m/%Y %H:%i:%s')
-          AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
+        (c.startTime BETWEEN '${initDate} 00:00:00' AND '${finalDate} 23:59:59')
     `);
 
   const { calls_quantity } = callsQty[0];

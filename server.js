@@ -8,8 +8,8 @@ const { socketProvider } = require("./src/sockets/socket");
 const { routesProvider } = require("./src/routes/routes");
 const morgan = require("morgan");
 
-const expressPort = 8082;
-const socketPort = 8083;
+const expressPort = 8080;
+const socketPort = 8081;
 
 const app = express();
 const server = createServer(app);

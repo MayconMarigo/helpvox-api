@@ -160,19 +160,25 @@ const deleteAgendaById = async (agendaId) => {
 };
 
 const bulkCreateUsers = async (decodedBody, companyId) => {
-  const pws = decodedBody.map((value) =>
-    CryptoUtils.convertToDatabaseFormatedPassword(String(value.phone))
-  );
-  const promises = Promise.all(pws);
+  // const pws = decodedBody.map((value) =>
+  //   CryptoUtils.convertToDatabaseFormatedPassword(String(value.phone))
+  // );
+  // const promises = Promise.all(pws);
 
-  const passwords = await promises;
+  // const passwords = await promises;
 
-  const finalMapper = decodedBody.map((user, index) => {
+  const mapper = decodedBody.map((user, index) => {
     return {
       ...user,
-      email: user.id,
-      password: passwords[index],
+      id: user.userId,
     };
+  });
+
+  const finalMapper = mapper.map((value) => {
+    delete value.userId;
+    delete value.encryptedPassword;
+
+    return value;
   });
 
   const created = await userQueries.bulkCreateUsers(finalMapper, companyId);
@@ -180,8 +186,8 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   return created;
 };
 
-const getUserByEmailAndCredential = async (email, phone) => {
-  const user = await userQueries.getUserByEmailAndCredential(email, phone);
+const getUserByEmailAndCredential = async (email, password) => {
+  const user = await userQueries.getUserByEmailAndCredential(email, password);
 
   return user;
 };
