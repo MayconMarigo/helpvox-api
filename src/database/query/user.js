@@ -585,7 +585,6 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
     COALESCE(caller.name, "Anônimo") AS callerName,
     receiver.name AS receiverName,
     caller.speciality as department,
-    receiver.speciality as speciality,
     DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
     TIME_FORMAT(SEC_TO_TIME(
       GREATEST(
