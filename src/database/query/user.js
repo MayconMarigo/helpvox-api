@@ -681,9 +681,9 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   return created;
 };
 
-const getUserByEmailAndCredential = async (email, password) => {
+const getUserByEmailAndCredential = async (email, phone) => {
   const data = await User.findOne({
-    where: { email, password, status: 1, userTypeId: 4 },
+    where: { email, phone, status: 1, userTypeId: 4 },
     attributes: ["id", "name", "email", "userTypeId", "phone"],
   });
 

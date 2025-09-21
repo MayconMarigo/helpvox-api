@@ -732,10 +732,7 @@ exports.routesProvider = (app) => {
 
         const { companyId } = req.params;
 
-        const created = await UserService.bulkCreateUsers(
-          req.body,
-          companyId
-        );
+        const created = await UserService.bulkCreateUsers(req.body, companyId);
         res.status(201).send({ created });
       } catch (error) {
         const { code, message } = extractCodeAndMessageFromError(error.message);
@@ -891,17 +888,14 @@ exports.routesProvider = (app) => {
         req.body
       );
       ValidationUtils.checkRequiredValues(
-        ["email", "password"],
+        ["email", "phone"],
         Object.keys(decodedBody)
       );
       ValidationUtils.checkTransformedValues(decodedBody);
 
-      const { email, password } = decodedBody;
+      const { email, phone } = decodedBody;
 
-      const user = await UserService.getUserByEmailAndCredential(
-        email,
-        password
-      );
+      const user = await UserService.getUserByEmailAndCredential(email, phone);
 
       const token = TokenService.createEncodedToken(user);
 
