@@ -715,25 +715,25 @@ exports.routesProvider = (app) => {
     isAuthenticated,
     async (req, res) => {
       try {
-        const cloneBody = [...req.body];
+        // const cloneBody = [...req.body];
 
-        const decodeUserArray = async (usersArray) => {
-          const t = [];
-          for (const user of usersArray) {
-            const temp = await CryptoUtils.retrieveValuesFromEncryptedBody(
-              user
-            );
-            t.push(temp);
-          }
-          return t;
-        };
+        // const decodeUserArray = async (usersArray) => {
+        //   const t = [];
+        //   for (const user of usersArray) {
+        //     const temp = await CryptoUtils.retrieveValuesFromEncryptedBody(
+        //       user
+        //     );
+        //     t.push(temp);
+        //   }
+        //   return t;
+        // };
 
-        const decodedBody = await decodeUserArray(cloneBody);
+        // const decodedBody = await decodeUserArray(cloneBody);
 
         const { companyId } = req.params;
 
         const created = await UserService.bulkCreateUsers(
-          decodedBody,
+          req.body,
           companyId
         );
         res.status(201).send({ created });

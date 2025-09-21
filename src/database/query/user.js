@@ -387,7 +387,7 @@ const getAllUsersByCompanyId = async (companyId) => {
       "name",
       "email",
       "phone",
-      [literal("document"), "cpf"],
+      // [literal("document"), "cpf"],
       "speciality",
       "status",
     ],
@@ -624,7 +624,7 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
 
   const [durationInMinutes] = await sequelize.query(`
     SELECT 
-      COALESCE(SUM(
+     COALESCE(SUM(
           GREATEST(
               CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60),
               1
@@ -665,6 +665,7 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   const usersList = decodedBody.map((user) => {
     return {
       ...user,
+      email: user.id,
       logoImage: null,
       colorScheme: null,
       status: Number(user.status) || 1,
@@ -675,8 +676,6 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
       createdBy: companyId,
     };
   });
-
-  console.log(usersList);
 
   const created = await User.bulkCreate(usersList);
   return created;

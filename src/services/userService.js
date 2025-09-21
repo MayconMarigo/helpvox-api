@@ -167,21 +167,21 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
 
   // const passwords = await promises;
 
-  const mapper = decodedBody.map((user, index) => {
-    return {
-      ...user,
-      id: user.userId,
-    };
-  });
+  // const mapper = decodedBody.map((user, index) => {
+  //   return {
+  //     ...user,
+  //     id: user.userId,
+  //   };
+  // });
 
-  const finalMapper = mapper.map((value) => {
-    delete value.userId;
-    delete value.encryptedPassword;
+  // const finalMapper = mapper.map((value) => {
+  //   delete value.userId;
+  //   delete value.encryptedPassword;
 
-    return value;
-  });
+  //   return value;
+  // });
 
-  const created = await userQueries.bulkCreateUsers(finalMapper, companyId);
+  const created = await userQueries.bulkCreateUsers(decodedBody, companyId);
 
   return created;
 };

@@ -140,7 +140,7 @@ const getAllCalls = async (startDate, endDate) => {
     `);
 
   const [durationInMinutes] = await sequelize.query(`
-      SELECT 
+    SELECT 
       COALESCE(SUM(
           GREATEST(
               CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60),
