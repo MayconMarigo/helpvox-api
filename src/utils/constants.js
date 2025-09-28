@@ -7,7 +7,7 @@ const TOTP = {
 //URLS
 
 const BASE_DAILY_JS_URL = "https://api.daily.co/v1";
-const BASE_DAILY_JS_URL_FRONTEND = "https://bemmaiscard.daily.co/";
+const BASE_DAILY_JS_URL_FRONTEND = "https://helpvoxapp.daily.co/";
 
 const secondsInAMinute = 60;
 const sefcondsInAHour = 3600;

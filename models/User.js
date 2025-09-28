@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       unique: true,
     },
     phone: {
-      type: DataTypes.STRING(11),
+      type: DataTypes.STRING(15),
       allowNull: true,
     },
     password: {
@@ -45,6 +45,9 @@ module.exports = (sequelize, DataTypes) => {
     },
     speciality: {
       type: DataTypes.STRING(50),
+    },
+    recordCall: {
+      type: DataTypes.INTEGER,
     },
   });
 

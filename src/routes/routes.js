@@ -7,7 +7,10 @@ const { agendaService } = require("../services/agendaService");
 const { departmentsService } = require("../services/departmentsService");
 const { CallService } = require("../services/callService");
 const { credentialsService } = require("../services/credentialsService");
-const { generateMeetingInformation } = require("../services/dailyJsService");
+const {
+  generateMeetingInformation,
+  getRecordIdByRoomId,
+} = require("../services/dailyJsService");
 const { RatingService } = require("../services/ratingService");
 const { TokenService } = require("../services/tokenService");
 const { UserService } = require("../services/userService");
@@ -17,6 +20,8 @@ const {
   formatErrorFieldsMessageFromDatabase,
 } = require("../utils/error");
 const { ValidationUtils } = require("../utils/validations");
+const { miscelaneousService } = require("../services/miscelaneousService");
+const { workerService } = require("../services/workerService");
 
 exports.routesProvider = (app) => {
   // Rotas GET
@@ -170,6 +175,66 @@ exports.routesProvider = (app) => {
         );
 
         res.status(200).send(calls);
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.get(
+    "/api/worker/calls/:workerId/get-all",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { workerId } = req.params;
+
+        const calls = await workerService.getLastTenCallsByWorkerId(workerId);
+
+        res.status(200).send(calls);
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
+  app.get(
+    "/api/worker/recordings/:roomId",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { roomId } = req.params;
+
+        const record = await fetch(
+          `https://api.daily.co/v1/recordings?room_name=${roomId}`,
+          {
+            headers: {
+              "Content-Type": "Application/json",
+              authorization: `Bearer ${process.env.DAILY_JS_API_KEY}`,
+            },
+          }
+        );
+
+        const { data } = await record.json();
+
+        const recordId = data[0].id;
+
+        const downloadObject = await fetch(
+          `https://api.daily.co/v1/recordings/${recordId}/access-link`,
+          {
+            headers: {
+              "Content-Type": "Application/json",
+              authorization: `Bearer ${process.env.DAILY_JS_API_KEY}`,
+            },
+          }
+        );
+
+        const urlData = await downloadObject.json();
+
+        const download_link = urlData.download_link;
+
+        res.status(200).send({ downloadURL: download_link });
       } catch (error) {
         const { code, message } = extractCodeAndMessageFromError(error.message);
         res.status(code).send({ message });
@@ -445,6 +510,30 @@ exports.routesProvider = (app) => {
       res.status(code).send({ message });
     }
   });
+
+  app.put(
+    "/api/enterprise/user/self/update",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const decodedBody = await CryptoUtils.retrieveValuesFromEncryptedBody(
+          req.body
+        );
+        ValidationUtils.checkRequiredValues(
+          ["recordCall", "userId"],
+          Object.keys(decodedBody)
+        );
+
+        await UserService.updateConfigsByUserId(decodedBody);
+
+        res.status(204).send();
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+
+        res.status(code).send({ message });
+      }
+    }
+  );
 
   app.put(
     "/api/enterprise/credential/update",
@@ -1252,4 +1341,15 @@ exports.routesProvider = (app) => {
       }
     }
   );
+
+  app.get("/api/dc-cards/get-all", isAuthenticated, async (req, res) => {
+    try {
+      const dcCards = await miscelaneousService.getAllDCCards();
+
+      res.status(200).send(dcCards);
+    } catch (error) {
+      const { code, message } = extractCodeAndMessageFromError(error.message);
+      res.status(code).send({ message });
+    }
+  });
 };

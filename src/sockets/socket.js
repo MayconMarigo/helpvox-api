@@ -46,7 +46,11 @@ exports.socketProvider = function (io) {
       );
 
       // console.log(companyToCall);
-      const room = await generateAdminRoomName(randomRoomName, companyToken);
+      const room = await generateAdminRoomName(
+        randomRoomName,
+        companyToken,
+        companyToCall.recordCall
+      );
       // const room = crypto.randomUUID();
 
       const agentToken = await generateTokenByRoomName(
@@ -183,7 +187,11 @@ exports.socketProvider = function (io) {
 
       // console.log("companyToken", companyToken);
 
-      const room = await generateAdminRoomName(randomRoomName, companyToken);
+      const room = await generateAdminRoomName(
+        randomRoomName,
+        companyToken,
+        company.recordCall
+      );
 
       // console.log("room", room);
 

@@ -28,25 +28,36 @@ exports.generateTokenByRoomName = async (roomName, user, isAdmin = false) => {
   return token;
 };
 
-exports.generateAdminRoomName = async (roomName, expiry) => {
+exports.generateAdminRoomName = async (
+  roomName,
+  expiry,
+  enableCallRecord = false
+) => {
   const time = new Date(expiry).getTime() / 1000 + 3600;
+
+  const payload = {
+    name: roomName,
+    properties: {
+      eject_at_room_exp: true,
+      enable_prejoin_ui: false,
+      lang: "pt-BR",
+      enable_chat: true,
+      max_participants: 2,
+      exp: time,
+    },
+  };
+
+  if (enableCallRecord) {
+    payload.properties.enable_recording = "cloud";
+  }
+
   const request = await fetch(`${BASE_DAILY_JS_URL}/rooms`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.DAILY_JS_API_KEY}`,
       ...commomHeaders,
     },
-    body: JSON.stringify({
-      name: roomName,
-      properties: {
-        eject_at_room_exp: true,
-        enable_prejoin_ui: false,
-        lang: "pt-BR",
-        enable_chat: true,
-        max_participants: 2,
-        exp: time,
-      },
-    }),
+    body: JSON.stringify(payload),
   });
 
   const { id, name } = await request.json();
@@ -57,6 +68,22 @@ exports.generateAdminRoomName = async (roomName, expiry) => {
 exports.generateMeetingInformation = async (meetingId) => {
   const request = await fetch(
     `${BASE_DAILY_JS_URL}/meetings/${meetingId}/participants`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.DAILY_JS_API_KEY}`,
+        ...commomHeaders,
+      },
+    }
+  );
+
+  const response = await request.json();
+
+  return response;
+};
+
+exports.getRecordIdByRoomId = async (roomId) => {
+  const request = await fetch(
+    `${BASE_DAILY_JS_URL}/recordings?room_name=${roomId}`,
     {
       headers: {
         Authorization: `Bearer ${process.env.DAILY_JS_API_KEY}`,

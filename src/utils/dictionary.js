@@ -33,4 +33,5 @@ const encryptDictionary = [
   { key: "dptcd", name: "departmentCode" },
   { key: "id", name: "id" },
   { key: "rl", name: "role" },
+  { key: "rc", name: "recordCall" },
 ];

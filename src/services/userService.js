@@ -160,12 +160,12 @@ const deleteAgendaById = async (agendaId) => {
 };
 
 const bulkCreateUsers = async (decodedBody, companyId) => {
-  // const pws = decodedBody.map((value) =>
-  //   CryptoUtils.convertToDatabaseFormatedPassword(String(value.phone))
-  // );
-  // const promises = Promise.all(pws);
+  const pws = decodedBody.map((value) =>
+    CryptoUtils.convertToDatabaseFormatedPassword(String(value.phone))
+  );
+  const promises = Promise.all(pws);
 
-  // const passwords = await promises;
+  const passwords = await promises;
 
   // const mapper = decodedBody.map((user, index) => {
   //   return {
@@ -174,14 +174,14 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   //   };
   // });
 
-  // const finalMapper = mapper.map((value) => {
-  //   delete value.userId;
-  //   delete value.encryptedPassword;
+  const finalMapper = decodedBody.map((value, index) => {
+    return {
+      ...value,
+      password: passwords[index],
+    };
+  });
 
-  //   return value;
-  // });
-
-  const created = await userQueries.bulkCreateUsers(decodedBody, companyId);
+  const created = await userQueries.bulkCreateUsers(finalMapper, companyId);
 
   return created;
 };
@@ -202,6 +202,12 @@ const getDashboardCSVInfo = async (companyId) => {
   const info = await userQueries.getDashboardCSVInfo(companyId);
 
   return info;
+};
+
+const updateConfigsByUserId = async (payload) => {
+  const updated = await userQueries.updateConfigsByUserId(payload);
+
+  return updated;
 };
 
 exports.UserService = {
@@ -229,4 +235,5 @@ exports.UserService = {
   getUserByEmailAndCredential,
   bulkDeleteUsers,
   getDashboardCSVInfo,
+  updateConfigsByUserId,
 };

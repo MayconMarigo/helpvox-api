@@ -1,4 +1,4 @@
-const { literal } = require("sequelize");
+const { literal, cast, col } = require("sequelize");
 const { User, UserType, Call, Credential, Agenda } = require("../../../models");
 const Crypto = require("crypto");
 const { dateUtils } = require("../../utils/date");
@@ -72,6 +72,7 @@ const getUserDataById = async (userId) => {
       "colorScheme",
       "userTypeId",
       "createdBy",
+      "recordCall",
     ],
     include: {
       model: UserType,
@@ -93,15 +94,21 @@ const getUserDataById = async (userId) => {
     const [createdByData] = await sequelize.query(
       `
         SELECT 
-        u.logoImage
+        u.logoImage,
+        u.recordCall,
+        u.colorScheme
         FROM users u
         where u.id = '${dataValues.createdBy}'
       `
     );
 
     const logoImage = createdByData[0]?.logoImage;
+    const colorScheme = createdByData[0]?.colorScheme;
+    const recordCall = !!createdByData[0]?.recordCall;
 
     dataValues.logoImage = logoImage;
+    dataValues.recordCall = recordCall;
+    dataValues.colorScheme = colorScheme;
   }
 
   if (dataValues.userTypeId == "2") {
@@ -131,6 +138,7 @@ const getUserDataById = async (userId) => {
   }
 
   delete dataValues.createdBy;
+  dataValues.recordCall = !!dataValues.recordCall;
 
   return dataValues;
 };
@@ -584,7 +592,6 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
      SELECT
     COALESCE(caller.name, "Anônimo") AS callerName,
     receiver.name AS receiverName,
-    caller.speciality as department,
     DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
     TIME_FORMAT(SEC_TO_TIME(
       GREATEST(
@@ -681,8 +688,10 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
 };
 
 const getUserByEmailAndCredential = async (email, phone) => {
+  const pw = await CryptoUtils.convertToDatabaseFormatedPassword(phone);
+
   const data = await User.findOne({
-    where: { email, phone, status: 1, userTypeId: 4 },
+    where: { email, password: pw, status: 1, userTypeId: 4 },
     attributes: ["id", "name", "email", "userTypeId", "phone"],
   });
 
@@ -782,6 +791,14 @@ const getDashboardCSVInfo = async (companyId) => {
   return data;
 };
 
+const updateConfigsByUserId = async (payload) => {
+  const { recordCall, userId } = payload;
+
+  const updated = await User.update({ recordCall }, { where: { id: userId } });
+
+  return updated;
+};
+
 exports.userQueries = {
   findAdminUserByEmail,
   findUserByEmailAndPassword,
@@ -807,4 +824,5 @@ exports.userQueries = {
   bulkDeleteUsers,
   getUserTypeIdById,
   getDashboardCSVInfo,
+  updateConfigsByUserId,
 };

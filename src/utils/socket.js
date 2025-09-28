@@ -59,10 +59,15 @@ const handleAddToTheQueue = (
   position = "end"
 ) => {
   let user;
+  let recordCall;
 
   try {
-    const parsed = JSON.parse(socket?.handshake?.query?.user);
-    user = parsed;
+    const parsedUser = JSON.parse(socket?.handshake?.query?.user);
+    const parsedRecordCall = JSON.parse(
+      socket?.handshake?.query?.recordCall || "false"
+    );
+    user = parsedUser;
+    recordCall = parsedRecordCall || false;
   } catch (error) {
     return (user = { name: "Anônimo", id: null });
   }
@@ -72,6 +77,7 @@ const handleAddToTheQueue = (
     status: isAgent ? "available" : null,
     type: isAgent ? "agent" : isObserver ? "observer" : "company",
     user,
+    recordCall,
     socket,
   };
 

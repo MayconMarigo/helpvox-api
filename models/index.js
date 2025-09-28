@@ -29,6 +29,7 @@ const Call = require("./Call")(sequelize, DataTypes);
 const Agenda = require("./Agenda")(sequelize, DataTypes);
 const Rating = require("./Rating")(sequelize, DataTypes);
 const Department = require("./Department")(sequelize, DataTypes);
+const DCCard = require("./DCCard")(sequelize, DataTypes);
 
 const db = {
   sequelize,
@@ -40,6 +41,7 @@ const db = {
   Agenda,
   Rating,
   Department,
+  DCCard,
 };
 
 Object.values(db).forEach((model) => {

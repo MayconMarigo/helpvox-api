@@ -182,6 +182,11 @@ const retrieveValuesFromEncryptedBody = async (body) => {
       transformedValue: decryptWithCypher(body?.rl),
       name: "role",
     },
+    {
+      key: "rc",
+      transformedValue: body?.rc,
+      name: "recordCall",
+    },
   ];
 
   const decryptedBody = {};
