@@ -396,7 +396,7 @@ const getAllUsersByCompanyId = async (companyId) => {
       "email",
       "phone",
       // [literal("document"), "cpf"],
-      "speciality",
+      // "speciality",
       "status",
     ],
   });
