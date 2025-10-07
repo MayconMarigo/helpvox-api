@@ -42,7 +42,7 @@ exports.generateAdminRoomName = async (
       enable_prejoin_ui: false,
       lang: "pt-BR",
       enable_chat: true,
-      max_participants: 2,
+      max_participants: 5,
       exp: time,
     },
   };

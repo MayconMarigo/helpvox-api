@@ -41,6 +41,9 @@ module.exports = (sequelize, DataTypes) => {
     isSocketConnection: {
       type: DataTypes.INTEGER,
     },
+    callDuration: {
+      type: DataTypes.STRING(5),
+    },
   });
 
   Calls.associate = (models) => {

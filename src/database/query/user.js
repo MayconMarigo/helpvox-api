@@ -290,7 +290,7 @@ const getAllCallsByUserId = async (startDate, endDate, userId) => {
     SELECT
       COALESCE(caller.name, "Anônimo") AS callerName,
       c.startTime,
-      TIME_FORMAT(SEC_TO_TIME(CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60) * 60), '%H:%i') AS callDuration
+      c.callDuration AS callDuration
     FROM calls c
     LEFT JOIN users caller ON c.callerId = caller.id
     INNER JOIN users receiver ON c.receiverId = receiver.id
@@ -593,12 +593,7 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
     COALESCE(caller.name, "Anônimo") AS callerName,
     receiver.name AS receiverName,
     DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
-    TIME_FORMAT(SEC_TO_TIME(
-      GREATEST(
-          CEIL(TIMESTAMPDIFF(SECOND, c.startTime, c.endTime) / 60), 
-        1
-        ) * 60
-      ), '%i') AS callDuration,
+    c.callDuration AS callDuration,
     r.rating
     FROM calls c
     LEFT JOIN users caller ON c.callerId = caller.id
@@ -682,16 +677,15 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
       createdBy: companyId,
     };
   });
-
   const created = await User.bulkCreate(usersList);
   return created;
 };
 
 const getUserByEmailAndCredential = async (email, phone) => {
-  const pw = await CryptoUtils.convertToDatabaseFormatedPassword(phone);
+  // const pw = await CryptoUtils.convertToDatabaseFormatedPassword(phone);
 
   const data = await User.findOne({
-    where: { email, password: pw, status: 1, userTypeId: 4 },
+    where: { email, phone, status: 1, userTypeId: 4 },
     attributes: ["id", "name", "email", "userTypeId", "phone"],
   });
 
@@ -782,6 +776,8 @@ const getDashboardCSVInfo = async (companyId) => {
       c.connected = 1
     AND
       u.createdBy = '${companyId}'
+    AND
+      u.userTypeId = 4
     GROUP BY 
       department,
       month; 

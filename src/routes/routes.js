@@ -687,6 +687,13 @@ exports.routesProvider = (app) => {
       const getFinalTime = (userJoinTime, duration) =>
         new Date(userJoinTime * 1000 + duration * 1000);
 
+      const durationInSeconds =
+        participants.caller.duration > participants.receiver.duration
+          ? participants.caller.duration
+          : participants.receiver.duration;
+
+      const callDuration = Math.ceil(durationInSeconds / 60).toString();
+
       await CallService.createCall(
         room,
         callerId,
@@ -696,7 +703,8 @@ exports.routesProvider = (app) => {
         getFinalTime(user01Info.join_time, user01Info.duration),
         null,
         false,
-        1
+        1,
+        callDuration
       );
 
       return res.status(200).send({ ok: true });

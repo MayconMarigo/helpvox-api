@@ -10,7 +10,8 @@ const createCall = async (
   endTime,
   videoUrl,
   isAnonymous,
-  isSocketConnection
+  isSocketConnection,
+  callDuration = null
 ) => {
   const [findCreatedBy] = await sequelize.query(
     `
@@ -35,6 +36,7 @@ const createCall = async (
       isAnonymous,
       isSocketConnection,
       createdBy: createdBy,
+      callDuration,
     },
   });
 
