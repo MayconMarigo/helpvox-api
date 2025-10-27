@@ -18,6 +18,7 @@ const createUser = async (payload) => {
     color,
     document = null,
     speciality,
+    recordCall
   } = payload;
 
   const formatPhone = (value) => {
@@ -49,6 +50,7 @@ const createUser = async (payload) => {
       updatedAt: new Date(),
       document,
       speciality,
+      recordCall
     },
   });
 
