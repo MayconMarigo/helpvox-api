@@ -592,7 +592,7 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
      SELECT
     COALESCE(caller.name, "Anônimo") AS callerName,
     receiver.name AS receiverName,
-    DATE_FORMAT(c.startTime, '%d/%m/%Y %H:%i') as startTime, 
+    DATE_FORMAT(DATE_SUB(c.startTime, INTERVAL 3 HOUR), '%d/%m/%Y %H:%i') AS startTime, 
     c.callDuration AS callDuration,
     r.rating
     FROM calls c
@@ -605,7 +605,10 @@ const getAllCallsByCompanyId = async (startDate, endDate, companyId) => {
     AND STR_TO_DATE('${finalDate} 23:59:59','%d/%m/%Y %H:%i:%s')
     AND
       c.createdBy = '${companyId}'
-    AND c.isSocketConnection = 1;
+    AND c.isSocketConnection = 1
+    ORDER BY
+    c.id
+    DESC;
     `
   );
 
@@ -666,7 +669,9 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
   const usersList = decodedBody.map((user) => {
     return {
       ...user,
-      email: user.id,
+      id: `${user.id}`,
+      email: `${user.id}`,
+      phone: `${user.phone}`,
       logoImage: null,
       colorScheme: null,
       status: Number(user.status) || 1,
@@ -675,6 +680,7 @@ const bulkCreateUsers = async (decodedBody, companyId) => {
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: companyId,
+      recordCall: null,
     };
   });
   const created = await User.bulkCreate(usersList);
@@ -795,6 +801,44 @@ const updateConfigsByUserId = async (payload) => {
   return updated;
 };
 
+const createManualCall = async (userId, callDuration) => {
+  const uuid = crypto.randomUUID();
+  const created = await sequelize.query(
+    `
+      INSERT INTO calls
+      (
+      callId, 
+      connected,
+      createdAt,
+      updatedAt, 
+      startTime, 
+      endTime, 
+      callerId, 
+      receiverId, 
+      isSocketConnection,
+      createdBy, 
+      callDuration
+      )
+      VALUES
+      (
+      '${uuid}',
+      '1',
+      now(),
+      now(),
+      now(),
+      now(),
+      '${userId}',
+      '${userId}',
+      '1',
+      '${userId}',
+      '${callDuration}'
+      )
+    `
+  );
+
+  return created;
+};
+
 exports.userQueries = {
   findAdminUserByEmail,
   findUserByEmailAndPassword,
@@ -821,4 +865,5 @@ exports.userQueries = {
   getUserTypeIdById,
   getDashboardCSVInfo,
   updateConfigsByUserId,
+  createManualCall,
 };

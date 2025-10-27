@@ -210,6 +210,12 @@ const updateConfigsByUserId = async (payload) => {
   return updated;
 };
 
+const createManualCall = async (userId, callDuration) => {
+  const created = await userQueries.createManualCall(userId, callDuration);
+
+  return created;
+};
+
 exports.UserService = {
   getUserDataByToken,
   getUserByEmailAndPassword,
@@ -236,4 +242,5 @@ exports.UserService = {
   bulkDeleteUsers,
   getDashboardCSVInfo,
   updateConfigsByUserId,
+  createManualCall,
 };
