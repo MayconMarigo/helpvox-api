@@ -216,6 +216,15 @@ const createManualCall = async (userId, callDuration) => {
   return created;
 };
 
+const generateUserTokenByCompanyAndUserId = async (companyId, userId) => {
+  const token = userQueries.generateUserTokenByCompanyAndUserId(
+    companyId,
+    userId
+  );
+
+  return token;
+};
+
 exports.UserService = {
   getUserDataByToken,
   getUserByEmailAndPassword,
@@ -243,4 +252,5 @@ exports.UserService = {
   getDashboardCSVInfo,
   updateConfigsByUserId,
   createManualCall,
+  generateUserTokenByCompanyAndUserId,
 };

@@ -7,6 +7,7 @@ const { sequelize } = require("../database");
 const { generateAdminRoomName } = require("../../services/dailyJsService");
 const { CryptoUtils } = require("../../utils/encryption");
 const { ERROR_MESSAGES } = require("../../utils/constants");
+const { TokenService } = require("../../services/tokenService");
 
 const findAdminUserByEmail = async (email) => {
   const data = await User.findOne({
@@ -839,6 +840,14 @@ const createManualCall = async (userId, callDuration) => {
   return created;
 };
 
+const generateUserTokenByCompanyAndUserId = async (companyId, userId) => {
+  const user = await getUserDataById(userId);
+
+  const token = TokenService.createEncodedToken(user);
+
+  return token;
+};
+
 exports.userQueries = {
   findAdminUserByEmail,
   findUserByEmailAndPassword,
@@ -866,4 +875,5 @@ exports.userQueries = {
   getDashboardCSVInfo,
   updateConfigsByUserId,
   createManualCall,
+  generateUserTokenByCompanyAndUserId,
 };

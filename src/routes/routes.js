@@ -857,6 +857,26 @@ exports.routesProvider = (app) => {
     }
   );
 
+  app.get(
+    "/api/:companyId/token/:userId/create",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { companyId, userId } = req.params;
+
+        const token = await UserService.generateUserTokenByCompanyAndUserId(
+          companyId,
+          userId
+        );
+
+        res.status(201).send({ token });
+      } catch (error) {
+        const { code, message } = extractCodeAndMessageFromError(error.message);
+        res.status(code).send({ message });
+      }
+    }
+  );
+
   app.post(
     "/api/:companyId/departments/create/bulk",
     isAuthenticated,
